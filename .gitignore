@@ -27,6 +27,19 @@ yarn-error.log*
 
 # local env files
 .env*.local
+pipeline/.env
+pipeline/data/*.csv
+pipeline/data/*.pdf
+!pipeline/data/.gitkeep
+
+# Supabase CLI temp
+supabase/.temp/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
 
 # vercel
 .vercel
