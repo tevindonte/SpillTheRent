@@ -1,6 +1,7 @@
 "use client";
 
 import type { MapFilters } from "@/lib/complexes";
+import { BOROUGH_PILLS, type BoroughArea } from "@/lib/map-boroughs";
 
 type MapFilterPanelProps = {
   open: boolean;
@@ -18,6 +19,11 @@ export function MapFilterPanel({
   if (!open) return null;
 
   const minRating = filters.minGoogleRating ?? 0;
+  const boroughArea = filters.boroughArea ?? "all";
+
+  const setBorough = (area: BoroughArea) => {
+    onChange({ ...filters, boroughArea: area === "all" ? undefined : area });
+  };
 
   return (
     <div className="pointer-events-auto absolute left-4 top-28 z-[1001] w-72 rounded-xl border border-neutral-800 bg-neutral-950/98 p-4 shadow-xl backdrop-blur-md">
@@ -30,6 +36,31 @@ export function MapFilterPanel({
         >
           Close
         </button>
+      </div>
+
+      <div className="mb-4">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
+          Borough
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {BOROUGH_PILLS.map((pill) => {
+            const active = boroughArea === pill.id;
+            return (
+              <button
+                key={pill.id}
+                type="button"
+                onClick={() => setBorough(pill.id)}
+                className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                  active
+                    ? "border-orange-500/60 bg-orange-950/50 text-orange-300"
+                    : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                }`}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <label className="mb-3 flex cursor-pointer items-center gap-2 text-sm text-neutral-300">
@@ -83,6 +114,7 @@ export function MapFilterPanel({
         type="button"
         onClick={() =>
           onChange({
+            boroughArea: undefined,
             rentStabilizedOnly: false,
             hasHpdViolations: false,
             minGoogleRating: 0,

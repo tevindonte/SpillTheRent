@@ -12,7 +12,7 @@ function parseNum(v: string): number {
 
 export function NetEffectiveRentCalculator() {
   const searchParams = useSearchParams();
-  const [listedRent, setListedRent] = useState("3400");
+  const [listedRent, setListedRent] = useState("");
   const [leaseTerm, setLeaseTerm] = useState("12");
   const [freeMonths, setFreeMonths] = useState("0");
   const [concessions, setConcessions] = useState("0");
@@ -20,6 +20,15 @@ export function NetEffectiveRentCalculator() {
   const [feeMode, setFeeMode] = useState<FeeMode>("dollar");
   const [howOpen, setHowOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const fromBuilding = searchParams.get("from") === "building";
+  const reportCount = parseInt(searchParams.get("reports") ?? "", 10);
+  const showPrefillHint =
+    fromBuilding &&
+    searchParams.get("rent") != null &&
+    searchParams.get("rent") !== "" &&
+    Number.isFinite(reportCount) &&
+    reportCount > 0;
 
   useEffect(() => {
     const rent = searchParams.get("rent");
@@ -29,6 +38,7 @@ export function NetEffectiveRentCalculator() {
     const fee = searchParams.get("broker");
     const mode = searchParams.get("feeMode");
     if (rent) setListedRent(rent);
+    else setListedRent("");
     if (term) setLeaseTerm(term);
     if (free) setFreeMonths(free);
     if (conc) setConcessions(conc);
@@ -86,11 +96,9 @@ export function NetEffectiveRentCalculator() {
   return (
     <div className="mx-auto max-w-lg space-y-8 px-4 py-8">
       <div>
-        <h1 className="text-2xl font-semibold text-neutral-50">
-          Net Effective Rent Calculator
-        </h1>
+        <h1 className="text-2xl font-semibold text-neutral-50">The Receipt</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          See what you actually pay after free months and concessions.
+          What you&apos;re actually paying vs what they&apos;re advertising.
         </p>
       </div>
 
@@ -104,6 +112,12 @@ export function NetEffectiveRentCalculator() {
             onChange={(e) => setListedRent(e.target.value)}
             className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-neutral-100"
           />
+          {showPrefillHint && (
+            <span className="mt-1 block text-xs text-neutral-500">
+              Pre-filled with median reported rent from {reportCount} tenant
+              {reportCount === 1 ? "" : "s"} at this building
+            </span>
+          )}
         </label>
 
         <label className="block text-sm text-neutral-400">

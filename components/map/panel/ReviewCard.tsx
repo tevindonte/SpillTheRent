@@ -39,6 +39,7 @@ export function ReviewCard({
   review: PanelReview;
   currentUserId: string | null;
 }) {
+  const isGoogle = review.source === "google";
   const { user } = useAuth();
   const [votesUp, setVotesUp] = useState(review.votes_up);
   const [votesDown, setVotesDown] = useState(review.votes_down);
@@ -126,17 +127,19 @@ export function ReviewCard({
     <article className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
       <div className="mb-2 flex items-start justify-between gap-2">
         <Stars rating={review.rating ?? 0} />
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-neutral-500" title={review.review_date ?? undefined}>
           {formatRelativeTime(review.review_date)}
         </span>
       </div>
 
       <p className="mb-1 text-xs text-neutral-500">
-        {review.is_anonymous
-          ? "Anonymous"
-          : review.author_handle
-            ? `@${review.author_handle}`
-            : "Tenant"}
+        {isGoogle
+          ? "Google review"
+          : review.is_anonymous
+            ? "Anonymous"
+            : review.author_handle
+              ? `@${review.author_handle}`
+              : "Tenant"}
       </p>
 
       {review.review_text && (
@@ -163,6 +166,8 @@ export function ReviewCard({
         </div>
       )}
 
+      {!isGoogle && (
+        <>
       <div className="mt-3 flex items-center gap-3">
         <button
           type="button"
@@ -260,6 +265,8 @@ export function ReviewCard({
             </button>
           </div>
         </div>
+      )}
+        </>
       )}
     </article>
   );

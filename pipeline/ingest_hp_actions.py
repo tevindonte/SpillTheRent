@@ -15,6 +15,7 @@ import argparse
 from typing import Any
 
 from address_utils import ComplexAddressIndex
+from borough_config import add_borough_cli_args, get_borough
 from nyc_ingest_common import (
     hp_address,
     fetch_socrata,
@@ -39,9 +40,13 @@ def is_hp_case(row: dict[str, Any]) -> bool:
     return "HP" in ct.upper()
 
 
-def row_to_action(row: dict[str, Any]) -> dict[str, Any] | None:
+def row_to_action(row: dict[str, Any], hp_boroid: str) -> dict[str, Any] | None:
     boro = str(row.get("boroid") or row.get("borough") or "").strip().upper()
-    if boro not in ("1", "MANHATTAN", "MN"):
+    allowed = {
+        hp_boroid,
+        {"1": "MANHATTAN", "3": "BROOKLYN", "4": "QUEENS"}.get(hp_boroid, ""),
+    }
+    if boro not in allowed:
         return None
     if not is_hp_case(row):
         return None
@@ -64,6 +69,7 @@ def row_to_action(row: dict[str, Any]) -> dict[str, Any] | None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    add_borough_cli_args(parser, default="MN")
     parser.add_argument("--limit", type=int, default=20_000)
     parser.add_argument(
         "--signals-only",
@@ -85,13 +91,14 @@ def main() -> None:
         print("Done (signals only).")
         return
 
+    borough = get_borough(args.borough)
     complexes = fetch_all_complexes(client)
     index = ComplexAddressIndex(complexes)
     print(f"Loaded {len(complexes)} complexes.")
 
     raw = fetch_socrata(
         HP_API,
-        where="boroid='1'",
+        where=f"boroid='{borough.hp_boroid}'",
         limit=args.limit * 2,
         desc="Fetching housing court cases",
     )
@@ -100,7 +107,7 @@ def main() -> None:
     unmatched: list[dict[str, str]] = []
 
     for row in raw:
-        rec = row_to_action(row)
+        rec = row_to_action(row, borough.hp_boroid)
         if not rec:
             continue
         cid = index.match(rec["address"], threshold=85)

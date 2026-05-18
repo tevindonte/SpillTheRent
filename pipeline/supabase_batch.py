@@ -719,6 +719,77 @@ def _recompute_hpd_scores_sql(db_url: str) -> None:
     print("HPD scores updated.")
 
 
+def batch_mark_rent_stabilized(
+    client: Client,
+    complex_ids: list[str],
+    *,
+    stabilization_year: int = 2024,
+    batch_size: int = 400,
+) -> int:
+    """
+    Mark many complexes as rent-stabilized (batched; avoids HTTP/2 stream exhaustion).
+  Uses DATABASE_URL SQL when set; otherwise .in_() PATCH batches with retries.
+    """
+    if not complex_ids:
+        return 0
+
+    unique_ids = list(dict.fromkeys(complex_ids))
+    db_url = _get_database_url()
+
+    if db_url:
+
+        def _sql_job() -> None:
+            import psycopg2
+
+            conn = psycopg2.connect(db_url)
+            try:
+                with conn.cursor() as cur:
+                    for batch in tqdm(
+                        chunked(unique_ids, 500),
+                        desc="Marking rent stabilized (SQL)",
+                        unit=" batch",
+                    ):
+                        cur.execute(
+                            """
+                            UPDATE complexes
+                            SET is_rent_stabilized = true,
+                                stabilization_year = %s
+                            WHERE id = ANY(%s::uuid[])
+                            """,
+                            (stabilization_year, batch),
+                        )
+                conn.commit()
+            finally:
+                conn.close()
+
+        if _run_sql_job("Rent stabilization update", _sql_job):
+            return len(unique_ids)
+
+    active = client
+    done = 0
+    batches = list(chunked(unique_ids, batch_size))
+    for i, batch in enumerate(tqdm(batches, desc="Marking rent stabilized", unit=" batch")):
+        if i > 0 and i % 8 == 0:
+            active = _fresh_supabase_client()
+            time.sleep(0.2)
+
+        payload: dict[str, Any] = {"is_rent_stabilized": True}
+        if stabilization_year:
+            payload["stabilization_year"] = stabilization_year
+
+        retry_execute(
+            lambda b=batch, p=payload, cl=active: cl.table("complexes")
+            .update(p)
+            .in_("id", b)
+            .execute(),
+            label="rent stabilization batch",
+        )
+        done += len(batch)
+        time.sleep(0.05)
+
+    return done
+
+
 def batch_set_landlord_id(
     client: Client,
     complex_ids: list[str],

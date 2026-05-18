@@ -67,7 +67,7 @@ export async function GET(
     .from("reviews")
     .select(
       `
-      id, rating, review_text, source, review_date, is_anonymous,
+      id, rating, review_text, source, review_date, user_id,
       profiles:user_id ( handle )
     `
     )
@@ -86,7 +86,7 @@ export async function GET(
       review_text: row.review_text,
       source: row.source,
       review_date: row.review_date,
-      is_anonymous: row.is_anonymous,
+      is_anonymous: !row.user_id,
       author_handle: handle ?? null,
     };
   });

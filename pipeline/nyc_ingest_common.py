@@ -153,9 +153,8 @@ def oath_is_short_term(row: dict[str, Any]) -> bool:
     return any(p in text for p in phrases)
 
 
-def oath_fetch_where() -> str:
-    """SoQL filter for short-term / illegal hotel violations in Manhattan."""
-    clauses = [
+def oath_short_term_clauses() -> list[str]:
+    return [
         "upper(violation_details) like '%SHORT TERM%'",
         "upper(violation_details) like '%ILLEGAL HOTEL%'",
         "upper(violation_details) like '%AIRBNB%'",
@@ -166,8 +165,13 @@ def oath_fetch_where() -> str:
         "upper(violation_description) like '%SHORT TERM%'",
         "upper(violation_description) like '%AIRBNB%'",
     ]
+
+
+def oath_fetch_where(oath_borough: str) -> str:
+    """SoQL filter for short-term / illegal hotel violations in a borough."""
+    clauses = oath_short_term_clauses()
     return (
-        "violation_location_borough='MANHATTAN' "
+        f"violation_location_borough='{oath_borough}' "
         f"AND ({' OR '.join(clauses)}) "
         "AND violation_location_house IS NOT NULL "
         "AND violation_location_street_name IS NOT NULL"

@@ -43,7 +43,22 @@ export default function MapPage() {
         </div>
       }
     >
-      <MapView />
+      <div className="relative h-full">
+        <MapView />
+        <footer className="pointer-events-none absolute bottom-0 left-0 right-0 z-[500] flex justify-center pb-2">
+          <nav className="pointer-events-auto flex gap-4 text-[10px] text-neutral-600">
+            <a href="/faq" className="hover:text-orange-400">
+              FAQ
+            </a>
+            <a href="/about" className="hover:text-orange-400">
+              About
+            </a>
+            <a href="/leaderboard" className="hover:text-orange-400">
+              Leaderboard
+            </a>
+          </nav>
+        </footer>
+      </div>
     </Suspense>
   );
 }

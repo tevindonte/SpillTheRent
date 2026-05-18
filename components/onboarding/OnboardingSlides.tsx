@@ -6,24 +6,24 @@ const STORAGE_KEY = "spr_onboarded";
 
 const SLIDES = [
   {
-    label: "THE TRUTH ABOUT YOUR BUILDING.",
-    title: "Don't sign a lease blind.",
+    label: "THE TEA ON YOUR BUILDING.",
+    title: "Apartments have receipts too.",
     subtitle:
-      "Real tenant reviews surface mold, deposit theft, broken elevators, and management nightmares before you move in. Not after.",
+      "Real reviews from real tenants. No sugar coating, no landlord spin. Just the unfiltered truth before you sign anything.",
     illustration: "reviews",
   },
   {
-    label: "ONE BUILDING. EIGHT DIFFERENT PRICES.",
-    title: "Everyone here pays something different.",
+    label: "NOT JUST REVIEWS.",
+    title: "We pulled the government records too.",
     subtitle:
-      "And until now, nobody knew. See what real tenants actually paid — not what the listing says.",
+      "Bedbug filings. HPD violations. Tenant lawsuits. Active construction permits. Official data landlords hope you never find.",
     illustration: "pricing",
   },
   {
-    label: "MANHATTAN. ALL OF IT.",
-    title: "12,000+ buildings. Real ratings.",
+    label: "MANHATTAN. BROOKLYN. LIC.",
+    title: "The tea app for apartments.",
     subtitle:
-      "Search any address. See Google reviews, red flag warnings, and real prices people actually paid. All in one place.",
+      "12,000+ buildings and growing. Search any building and get the full picture — reviews, red flags, real rent prices, all in one place.",
     illustration: "scale",
   },
 ] as const;
@@ -163,7 +163,7 @@ export function OnboardingSlides({ onComplete }: OnboardingSlidesProps) {
             onClick={finish}
             className="w-full rounded-full bg-orange-500 py-4 text-sm font-semibold text-neutral-950 transition hover:bg-orange-400"
           >
-            Open the map →
+            Spill the tea →
           </button>
         ) : (
           <button

@@ -13,7 +13,7 @@ export function Sidebar({ complexes, loading, onSelect }: SidebarProps) {
     <aside className="pointer-events-auto flex h-full w-full max-w-sm flex-col border-l border-neutral-800 bg-neutral-950/95 shadow-2xl backdrop-blur-sm">
       <header className="shrink-0 border-b border-neutral-800 px-4 py-4">
         <h1 className="text-lg font-semibold tracking-tight text-neutral-100">
-          SpillTheRent
+          spillthe.rent
         </h1>
         <p className="mt-1 text-xs text-neutral-500">
           {loading

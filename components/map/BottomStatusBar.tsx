@@ -1,12 +1,20 @@
 "use client";
 
 import type { Complex } from "@/lib/complexes";
+import { formatRent } from "@/lib/format";
+import { boroughAreaLabel, type BoroughArea } from "@/lib/map-boroughs";
 
 type BottomStatusBarProps = {
   complexes: Complex[];
+  medianRent?: number | null;
+  boroughArea?: BoroughArea;
 };
 
-export function BottomStatusBar({ complexes }: BottomStatusBarProps) {
+export function BottomStatusBar({
+  complexes,
+  medianRent,
+  boroughArea,
+}: BottomStatusBarProps) {
   const count = complexes.length;
   const ratings = complexes
     .map((c) => c.google_rating)
@@ -16,6 +24,8 @@ export function BottomStatusBar({ complexes }: BottomStatusBarProps) {
       ? ratings.reduce((a, b) => a + b, 0) / ratings.length
       : null;
   const totalReviews = complexes.reduce((sum, c) => sum + c.review_count, 0);
+  const medianLabel = formatRent(medianRent);
+  const boroughLabel = boroughAreaLabel(boroughArea);
 
   return (
     <div
@@ -27,7 +37,8 @@ export function BottomStatusBar({ complexes }: BottomStatusBarProps) {
         <strong className="font-semibold text-neutral-200">
           {count.toLocaleString()}
         </strong>{" "}
-        {count === 1 ? "building" : "buildings"} in view
+        {count === 1 ? "building" : "buildings"}
+        {boroughLabel ? ` in ${boroughLabel}` : " in view"}
         <span className="mx-2 text-neutral-700">·</span>
         avg rating{" "}
         <strong className="font-semibold text-neutral-200">
@@ -38,6 +49,13 @@ export function BottomStatusBar({ complexes }: BottomStatusBarProps) {
           {totalReviews.toLocaleString()}
         </strong>{" "}
         {totalReviews === 1 ? "review" : "reviews"}
+        {medianLabel && (
+          <>
+            <span className="mx-2 text-neutral-700">·</span>
+            median rent{" "}
+            <strong className="font-semibold text-neutral-200">{medianLabel}</strong>
+          </>
+        )}
       </p>
     </div>
   );

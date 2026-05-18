@@ -20,7 +20,9 @@ export function DebouncedBoundsTracker({
   onViewportChangeRef.current = onViewportChange;
 
   const emit = useCallback(() => {
-    onViewportChangeRef.current(map.getBounds(), map.getZoom());
+    const bounds = map.getBounds();
+    const zoom = map.getZoom();
+    onViewportChangeRef.current(bounds, zoom);
   }, [map]);
 
   const schedule = useCallback(() => {

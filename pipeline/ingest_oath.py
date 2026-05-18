@@ -16,6 +16,7 @@ from collections import defaultdict
 from typing import Any
 
 from address_utils import ComplexAddressIndex
+from borough_config import add_borough_cli_args, get_borough
 from nyc_ingest_common import (
     fetch_socrata,
     insert_rows,
@@ -33,9 +34,9 @@ OATH_API = "https://data.cityofnewyork.us/resource/jz4z-kudi.json"
 UNMATCHED_CSV = PIPELINE_DIR / "data" / "oath_unmatched.csv"
 
 
-def row_to_violation(row: dict[str, Any]) -> dict[str, Any] | None:
+def row_to_violation(row: dict[str, Any], oath_borough: str) -> dict[str, Any] | None:
     borough = (row.get("violation_location_borough") or "").strip().upper()
-    if borough != "MANHATTAN":
+    if borough != oath_borough:
         return None
     if not oath_is_short_term(row):
         return None
@@ -61,17 +62,19 @@ def row_to_violation(row: dict[str, Any]) -> dict[str, Any] | None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    add_borough_cli_args(parser, default="MN")
     parser.add_argument("--limit", type=int, default=20_000)
     args = parser.parse_args()
 
     client = get_supabase_client()
+    borough = get_borough(args.borough)
     complexes = fetch_all_complexes(client)
     index = ComplexAddressIndex(complexes)
     print(f"Loaded {len(complexes)} complexes.")
 
     raw = fetch_socrata(
         OATH_API,
-        where=oath_fetch_where(),
+        where=oath_fetch_where(borough.oath_borough),
         limit=args.limit * 2,
         desc="Fetching OATH violations",
     )
@@ -81,7 +84,7 @@ def main() -> None:
     by_complex: dict[str, int] = defaultdict(int)
 
     for row in raw:
-        rec = row_to_violation(row)
+        rec = row_to_violation(row, borough.oath_borough)
         if not rec:
             continue
         cid = index.match(rec["address"], threshold=85)

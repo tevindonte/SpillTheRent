@@ -3,8 +3,12 @@ import { Navbar } from "@/components/layout/Navbar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SpillTheRent",
-  description: "Manhattan rental intel — map, reviews, and real rent data",
+  title: {
+    default: "spillthe.rent",
+    template: "%s · spillthe.rent",
+  },
+  description:
+    "Manhattan, Brooklyn & LIC rental intel — map, reviews, and real rent data",
 };
 
 export default function RootLayout({

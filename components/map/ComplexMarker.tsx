@@ -21,10 +21,17 @@ export function ComplexMarker({
   onSelect,
   renderer,
 }: ComplexMarkerProps) {
-  const rentLabel = formatRent(complex.median_rent);
+  const medianRent = complex.cached_median_rent ?? complex.median_rent;
+  const rentLabel = formatRent(medianRent);
+  const signalHigh = (complex.cached_signal_count ?? 0) > 3;
+  const mapScore =
+    complex.cached_community_score != null
+      ? complex.cached_community_score
+      : complex.google_rating;
+
   const pillIcon = useMemo(
-    () => (rentLabel ? createRentPillIcon(rentLabel, selected) : null),
-    [rentLabel, selected]
+    () => (rentLabel ? createRentPillIcon(rentLabel, selected, signalHigh) : null),
+    [rentLabel, selected, signalHigh]
   );
 
   const clickHandlers = useMemo(
@@ -45,21 +52,37 @@ export function ComplexMarker({
     );
   }
 
-  const color = ratingColor(complex.google_rating);
+  const color = ratingColor(mapScore);
 
   return (
-    <CircleMarker
-      center={[complex.lat, complex.lng]}
-      radius={selected ? 9 : 7}
-      renderer={renderer}
-      pathOptions={{
-        color: selected ? "#fafafa" : color,
-        fillColor: color,
-        fillOpacity: 0.9,
-        weight: selected ? 2.5 : 1.5,
-        opacity: 0.95,
-      }}
-      eventHandlers={clickHandlers}
-    />
+    <>
+      <CircleMarker
+        center={[complex.lat, complex.lng]}
+        radius={selected ? 9 : 7}
+        renderer={renderer}
+        pathOptions={{
+          color: selected ? "#fafafa" : color,
+          fillColor: color,
+          fillOpacity: 0.9,
+          weight: selected ? 2.5 : 1.5,
+          opacity: 0.95,
+        }}
+        eventHandlers={clickHandlers}
+      />
+      {signalHigh && (
+        <CircleMarker
+          center={[complex.lat, complex.lng]}
+          radius={4}
+          renderer={renderer}
+          pathOptions={{
+            color: "#0a0a0a",
+            fillColor: "#f97316",
+            fillOpacity: 1,
+            weight: 1.5,
+          }}
+          eventHandlers={clickHandlers}
+        />
+      )}
+    </>
   );
 }

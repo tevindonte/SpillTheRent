@@ -4,6 +4,7 @@ import type { BuildingSignals } from "@/lib/building-detail";
 
 type BuildingRecordSectionProps = {
   signals: BuildingSignals;
+  hpdOpenViolations: number;
 };
 
 function SignalRow({
@@ -39,9 +40,13 @@ function SignalRow({
   );
 }
 
-export function BuildingRecordSection({ signals }: BuildingRecordSectionProps) {
+export function BuildingRecordSection({
+  signals,
+  hpdOpenViolations,
+}: BuildingRecordSectionProps) {
   const currentYear = new Date().getFullYear();
   const hasAny =
+    hpdOpenViolations > 0 ||
     signals.has_bedbug_history ||
     signals.has_active_construction ||
     signals.oath_violation_count > 0 ||
@@ -53,11 +58,11 @@ export function BuildingRecordSection({ signals }: BuildingRecordSectionProps) {
         <h3 className="text-sm font-semibold text-neutral-200">Building Record</h3>
         <div className="rounded-xl border border-emerald-900/40 bg-emerald-950/20 p-4">
           <p className="text-sm font-medium text-emerald-400">
-            ✅ No major red flags on record
+            ✅ No major violations on record
           </p>
           <p className="mt-1 text-xs text-neutral-500">
-            No bedbug filings, active construction permits, illegal short-term rental
-            citations, or tenant housing court actions found for this address.
+            This building has no open HPD violations, no bedbug reports, and no
+            housing court actions on file. That&apos;s a good sign.
           </p>
         </div>
       </div>
@@ -67,6 +72,13 @@ export function BuildingRecordSection({ signals }: BuildingRecordSectionProps) {
   return (
     <div className="mt-5 space-y-2">
       <h3 className="text-sm font-semibold text-neutral-200">Building Record</h3>
+
+      {hpdOpenViolations > 0 && (
+        <SignalRow icon="🚨" title="HPD Violations">
+          {hpdOpenViolations} open violation{hpdOpenViolations === 1 ? "" : "s"} on
+          file with NYC Housing Preservation & Development.
+        </SignalRow>
+      )}
 
       {signals.has_bedbug_history && (
         <SignalRow

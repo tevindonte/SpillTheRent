@@ -40,7 +40,7 @@ export async function GET(
        stabilized_units, stabilization_year, landlord_id,
        has_bedbug_history, bedbug_last_reported_year, bedbug_report_count,
        has_active_construction, active_permit_count, oath_violation_count,
-       hp_action_count, hp_action_last_year`
+       hp_action_count, hp_action_last_year, cached_community_score`
     )
     .eq("id", id)
     .maybeSingle();
@@ -133,9 +133,14 @@ export async function GET(
     lat,
     lng,
     median_rent,
+    rent_report_count: allRents.length,
     rent_by_bedroom: rentByBedroom,
     community_rating,
     community_review_count,
+    spill_score:
+      complex.cached_community_score != null
+        ? Number(complex.cached_community_score)
+        : null,
     hpd_open_violations: complex.hpd_open_violations ?? 0,
     hpd_violation_score: complex.hpd_violation_score,
     is_rent_stabilized: complex.is_rent_stabilized ?? false,

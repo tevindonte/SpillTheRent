@@ -1,18 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
 import type { LatLngBounds } from "leaflet";
 import type { Complex, MapFilters } from "@/lib/complexes";
 import {
-  MANHATTAN_BOUNDS,
+  DEFAULT_MAP_CENTER,
+  DEFAULT_MAP_ZOOM,
   MANHATTAN_CENTER,
-  MANHATTAN_ZOOM,
   MAP_TILE_ATTRIBUTION,
   MAP_TILE_URL,
 } from "@/lib/map";
+import { BoroughFlyTo } from "./BoroughFlyTo";
 import { useViewportComplexes } from "@/hooks/useViewportComplexes";
+import { useViewportStats } from "@/hooks/useViewportStats";
 import { AddBuildingModal } from "./AddBuildingModal";
 import { BuildingPanel } from "./BuildingPanel";
 import { BottomStatusBar } from "./BottomStatusBar";
@@ -36,14 +38,38 @@ function FlyToComplex({ complex }: { complex: Complex | null }) {
   return null;
 }
 
+function detailToComplex(data: Record<string, unknown>): Complex {
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    address: (data.address as string | null) ?? null,
+    borough: (data.borough as string | null) ?? null,
+    zip: (data.zip as string | null) ?? null,
+    units: (data.units as number | null) ?? null,
+    google_rating: (data.google_rating as number | null) ?? null,
+    google_review_count: (data.google_review_count as number | null) ?? null,
+    street_view_url: (data.street_view_url as string | null) ?? null,
+    median_rent: (data.median_rent as number | null) ?? null,
+    review_count: (data.community_review_count as number) ?? 0,
+    lat: data.lat as number,
+    lng: data.lng as number,
+    hpd_open_violations: (data.hpd_open_violations as number) ?? 0,
+    hpd_violation_score: (data.hpd_violation_score as string | null) ?? null,
+    is_rent_stabilized: (data.is_rent_stabilized as boolean) ?? false,
+  };
+}
+
 export default function MapView() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const deepLinkHandled = useRef<string | null>(null);
   const [filters, setFilters] = useState<MapFilters>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [panelRefreshKey, setPanelRefreshKey] = useState(0);
 
-  const { complexes, loading, error, zoom, loadForBounds } =
+  const { complexes, loading, error, zoom, loadForBounds, noteBoundsDebounced } =
     useViewportComplexes(filters);
+  const { medianRent, fetchStats } = useViewportStats(filters);
 
   const [selectedComplex, setSelectedComplex] = useState<Complex | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -54,14 +80,25 @@ export default function MapView() {
 
   const handleViewportChange = useCallback(
     (bounds: LatLngBounds, nextZoom: number) => {
+      noteBoundsDebounced();
       loadForBounds(bounds, nextZoom);
+      fetchStats(bounds);
     },
-    [loadForBounds]
+    [loadForBounds, fetchStats, noteBoundsDebounced]
   );
 
-  const handleSelectComplex = useCallback((complex: Complex) => {
-    setSelectedComplex(complex);
-  }, []);
+  const handleSelectComplex = useCallback(
+    (complex: Complex) => {
+      setSelectedComplex(complex);
+      router.replace(`/?building=${complex.id}`, { scroll: false });
+    },
+    [router]
+  );
+
+  const handleClosePanel = useCallback(() => {
+    setSelectedComplex(null);
+    router.replace("/", { scroll: false });
+  }, [router]);
 
   const openReview = useCallback((complex: Complex) => {
     setReviewComplex(complex);
@@ -79,26 +116,18 @@ export default function MapView() {
 
   useEffect(() => {
     const buildingId = searchParams.get("building");
-    if (!buildingId) return;
-    fetch(`/api/complexes/${buildingId}`)
+    if (!buildingId) {
+      deepLinkHandled.current = null;
+      return;
+    }
+    if (deepLinkHandled.current === buildingId) return;
+    deepLinkHandled.current = buildingId;
+
+    fetch(`/api/complexes/${buildingId}/detail`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!data) return;
-        setSelectedComplex({
-          id: data.id,
-          name: data.name,
-          address: data.address,
-          borough: data.borough,
-          zip: data.zip,
-          units: data.units,
-          google_rating: data.google_rating,
-          google_review_count: data.google_review_count,
-          street_view_url: data.street_view_url,
-          median_rent: data.median_rent,
-          review_count: 0,
-          lat: data.lat,
-          lng: data.lng,
-        });
+        setSelectedComplex(detailToComplex(data));
       })
       .catch(() => {});
   }, [searchParams]);
@@ -155,17 +184,16 @@ export default function MapView() {
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#0a0a0a]">
       <MapContainer
-        center={MANHATTAN_CENTER}
-        zoom={MANHATTAN_ZOOM}
+        center={DEFAULT_MAP_CENTER}
+        zoom={DEFAULT_MAP_ZOOM}
         className="h-full w-full z-0"
-        maxBounds={MANHATTAN_BOUNDS}
-        maxBoundsViscosity={1}
         preferCanvas
         zoomControl={false}
       >
         <ZoomControl position="bottomleft" />
         <TileLayer url={MAP_TILE_URL} attribution={MAP_TILE_ATTRIBUTION} />
         <DebouncedBoundsTracker onViewportChange={handleViewportChange} />
+        <BoroughFlyTo boroughArea={filters.boroughArea} />
         <FlyToComplex complex={selectedComplex} />
         <MapMarkers
           complexes={complexes}
@@ -224,14 +252,14 @@ export default function MapView() {
         <>
           <div
             className="pointer-events-auto fixed inset-0 z-[999] bg-black/40 md:hidden"
-            onClick={() => setSelectedComplex(null)}
+            onClick={handleClosePanel}
             aria-hidden
           />
           <div className="pointer-events-none fixed inset-x-0 bottom-0 top-auto z-[1000] flex h-[85vh] md:absolute md:inset-y-0 md:right-0 md:left-auto md:bottom-12 md:h-auto md:w-[420px]">
             <BuildingPanel
               complex={selectedComplex}
               refreshKey={panelRefreshKey}
-              onClose={() => setSelectedComplex(null)}
+              onClose={handleClosePanel}
               onRateBuilding={openReview}
               onReportRent={openRent}
             />
@@ -239,7 +267,11 @@ export default function MapView() {
         </>
       )}
 
-      <BottomStatusBar complexes={complexes} />
+      <BottomStatusBar
+        complexes={complexes}
+        medianRent={medianRent}
+        boroughArea={filters.boroughArea}
+      />
 
       <ReviewModal
         open={reviewOpen}

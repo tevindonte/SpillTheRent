@@ -14,6 +14,7 @@ import argparse
 from typing import Any
 
 from address_utils import build_address_from_parts, ComplexAddressIndex
+from borough_config import add_borough_cli_args, get_borough
 from nyc_ingest_common import (
     fetch_socrata,
     insert_rows,
@@ -27,9 +28,9 @@ BEDBUG_API = "https://data.cityofnewyork.us/resource/wz6d-d3jb.json"
 UNMATCHED_CSV = PIPELINE_DIR / "data" / "bedbug_unmatched.csv"
 
 
-def row_to_report(row: dict[str, Any]) -> dict[str, Any] | None:
+def row_to_report(row: dict[str, Any], bedbug_borough: str) -> dict[str, Any] | None:
     borough = (row.get("borough") or "").strip().upper()
-    if borough != "MANHATTAN":
+    if borough != bedbug_borough:
         return None
 
     address = build_address_from_parts(
@@ -57,6 +58,7 @@ def row_to_report(row: dict[str, Any]) -> dict[str, Any] | None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    add_borough_cli_args(parser, default="MN")
     parser.add_argument("--limit", type=int, default=50_000)
     parser.add_argument(
         "--signals-only",
@@ -82,9 +84,10 @@ def main() -> None:
     index = ComplexAddressIndex(complexes)
     print(f"Loaded {len(complexes)} complexes.")
 
+    borough = get_borough(args.borough)
     raw = fetch_socrata(
         BEDBUG_API,
-        where="borough='MANHATTAN'",
+        where=f"borough='{borough.bedbug_borough}'",
         limit=args.limit,
         desc="Fetching bedbug reports",
     )
@@ -95,7 +98,7 @@ def main() -> None:
     from tqdm import tqdm
 
     for row in tqdm(raw, desc="Matching addresses"):
-        rec = row_to_report(row)
+        rec = row_to_report(row, borough.bedbug_borough)
         if not rec:
             continue
         cid = index.match(rec["address"], threshold=85)

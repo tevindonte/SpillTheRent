@@ -36,7 +36,10 @@ def fetch_all_complexes(client: Client) -> list[dict]:
     while True:
         result = (
             client.table("complexes")
-            .select("id, address, name, units, google_rating, ownername, landlord_id")
+            .select(
+                "id, address, name, borough, neighborhood, units, "
+                "google_rating, ownername, landlord_id"
+            )
             .range(offset, offset + page_size - 1)
             .execute()
         )

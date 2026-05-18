@@ -34,7 +34,7 @@ export async function GET(
       .from("reviews")
       .select(
         `
-        id, rating, review_text, review_date, created_at, complex_id, is_anonymous,
+        id, rating, review_text, review_date, created_at, complex_id, user_id,
         complexes ( name ),
         profiles:user_id ( handle )
       `
@@ -58,7 +58,7 @@ export async function GET(
         review_date: row.review_date ?? row.created_at,
         building_name: name,
         complex_id: row.complex_id,
-        is_anonymous: row.is_anonymous,
+        is_anonymous: !row.user_id,
         author_handle: handle ?? null,
       };
     });

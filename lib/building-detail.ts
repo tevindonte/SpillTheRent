@@ -33,9 +33,11 @@ export type BuildingDetail = {
   lat: number;
   lng: number;
   median_rent: number | null;
+  rent_report_count: number;
   rent_by_bedroom: Record<string, number | null>;
   community_rating: number | null;
   community_review_count: number;
+  spill_score: number | null;
   hpd_open_violations: number;
   hpd_violation_score: string | null;
   is_rent_stabilized: boolean;
@@ -48,6 +50,7 @@ export type BuildingDetail = {
 
 export type PanelReview = {
   id: string;
+  source?: "user" | "google";
   rating: number | null;
   review_text: string | null;
   review_date: string | null;
@@ -75,7 +78,12 @@ export async function fetchBuildingDetail(id: string): Promise<BuildingDetail> {
 
 export async function fetchBuildingReviews(
   id: string,
-  options: { sort?: string; page?: number; limit?: number } = {}
+  options: {
+    sort?: string;
+    page?: number;
+    limit?: number;
+    source?: "user" | "google";
+  } = {}
 ): Promise<{
   reviews: PanelReview[];
   total: number;
@@ -85,6 +93,7 @@ export async function fetchBuildingReviews(
   if (options.sort) params.set("sort", options.sort);
   if (options.page) params.set("page", String(options.page));
   if (options.limit) params.set("limit", String(options.limit));
+  if (options.source) params.set("source", options.source);
   const res = await fetch(`/api/complexes/${id}/reviews?${params}`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

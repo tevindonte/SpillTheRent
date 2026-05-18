@@ -18,6 +18,7 @@ from datetime import date
 from typing import Any
 
 from address_utils import ComplexAddressIndex
+from borough_config import add_borough_cli_args, get_borough
 from nyc_ingest_common import (
     dob_now_address,
     fetch_socrata,
@@ -41,18 +42,18 @@ CONSTRUCTION_WORK_TYPES = (
 )
 
 
-def build_where(today: date) -> str:
+def build_where(today: date, dob_borough: str) -> str:
     types_sql = ", ".join(f"'{t}'" for t in CONSTRUCTION_WORK_TYPES)
     return (
-        f"borough='MANHATTAN' "
+        f"borough='{dob_borough}' "
         f"AND expired_date > '{today.isoformat()}' "
         f"AND permit_status='Permit Issued' "
         f"AND work_type in ({types_sql})"
     )
 
 
-def row_to_permit(row: dict[str, Any], today: date) -> dict[str, Any] | None:
-    if (row.get("borough") or "").strip().upper() != "MANHATTAN":
+def row_to_permit(row: dict[str, Any], today: date, dob_borough: str) -> dict[str, Any] | None:
+    if (row.get("borough") or "").strip().upper() != dob_borough:
         return None
     if (row.get("permit_status") or "").strip() != "Permit Issued":
         return None
@@ -81,6 +82,7 @@ def row_to_permit(row: dict[str, Any], today: date) -> dict[str, Any] | None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    add_borough_cli_args(parser, default="MN")
     parser.add_argument("--limit", type=int, default=10_000)
     parser.add_argument(
         "--signals-only",
@@ -97,6 +99,7 @@ def main() -> None:
 
     today = date.today()
     client = get_supabase_client()
+    borough = get_borough(args.borough)
 
     if args.signals_only:
         recompute_dob_permit_signals(client)
@@ -109,7 +112,7 @@ def main() -> None:
 
     raw = fetch_socrata(
         DOB_NOW_API,
-        where=build_where(today),
+        where=build_where(today, borough.dob_borough),
         limit=args.limit * 2,
         desc="Fetching DOB permits",
     )
@@ -117,7 +120,7 @@ def main() -> None:
     permits: list[dict[str, Any]] = []
 
     for row in raw:
-        rec = row_to_permit(row, today)
+        rec = row_to_permit(row, today, borough.dob_borough)
         if not rec:
             continue
         cid = index.match(rec["address"], threshold=85)

@@ -15,6 +15,8 @@ import { streetViewProxyUrl, streetViewUrlFromStored } from "@/lib/streetview";
 import { useAuth } from "@/hooks/useAuth";
 import { BuildingRecordSection } from "./panel/BuildingRecordSection";
 import { ReviewCard } from "./panel/ReviewCard";
+import { BuildingPanelActions } from "./BuildingPanelActions";
+import { useToast } from "@/hooks/useToast";
 
 type SortOption =
   | "most_recent"
@@ -35,14 +37,30 @@ function ScoreStars({
   label,
   count,
   emptyLabel,
+  onClick,
+  active,
+  title,
 }: {
   rating: number | null;
   label: string;
   count?: number;
   emptyLabel: string;
+  onClick?: () => void;
+  active?: boolean;
+  title?: string;
 }) {
+  const Wrapper = onClick ? "button" : "div";
   return (
-    <div className="flex-1 rounded-xl border border-neutral-800 bg-neutral-900/50 p-3 text-center">
+    <Wrapper
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      title={title}
+      className={`flex-1 rounded-xl border bg-neutral-900/50 p-3 text-center ${
+        active
+          ? "border-orange-500/60 ring-1 ring-orange-500/30"
+          : "border-neutral-800"
+      } ${onClick ? "cursor-pointer transition hover:border-orange-500/40 hover:bg-neutral-900/80" : ""}`}
+    >
       <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
         {label}
       </p>
@@ -64,13 +82,15 @@ function ScoreStars({
             {rating.toFixed(1)}
           </p>
           {count != null && (
-            <p className="text-[10px] text-neutral-500">({count} reviews)</p>
+            <p className="text-[10px] text-neutral-500">
+              ({count} reviews{onClick ? " · tap to read" : ""})
+            </p>
           )}
         </>
       ) : (
         <p className="mt-3 text-xs text-neutral-500">{emptyLabel}</p>
       )}
-    </div>
+    </Wrapper>
   );
 }
 
@@ -82,6 +102,7 @@ export function BuildingPanel({
   onReportRent,
 }: BuildingPanelProps) {
   const { user } = useAuth();
+  const { showToast, Toast } = useToast();
   const [detail, setDetail] = useState<BuildingDetail | null>(null);
   const [reviews, setReviews] = useState<PanelReview[]>([]);
   const [reviewTotal, setReviewTotal] = useState(0);
@@ -94,6 +115,10 @@ export function BuildingPanel({
   const [nameFormOpen, setNameFormOpen] = useState(false);
   const [suggestedName, setSuggestedName] = useState("");
   const [nameMessage, setNameMessage] = useState<string | null>(null);
+  const [googleOpen, setGoogleOpen] = useState(false);
+  const [googleReviews, setGoogleReviews] = useState<PanelReview[]>([]);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   const loadDetail = useCallback(async () => {
     const data = await fetchBuildingDetail(complex.id);
@@ -143,11 +168,34 @@ export function BuildingPanel({
 
   const hpdScore = detail?.hpd_violation_score;
   const hpdOpen = detail?.hpd_open_violations ?? 0;
-  const isEmpty =
-    detail &&
-    detail.community_review_count === 0 &&
-    !detail.median_rent &&
-    !detail.hpd_violation_score;
+  const noReviews = detail != null && detail.community_review_count === 0;
+  const noRent = detail != null && !detail.median_rent;
+
+  const loadGoogleReviews = useCallback(async () => {
+    setGoogleLoading(true);
+    setGoogleError(null);
+    try {
+      const data = await fetchBuildingReviews(complex.id, {
+        source: "google",
+        sort: "most_recent",
+        page: 1,
+        limit: 20,
+      });
+      setGoogleReviews(data.reviews);
+    } catch (e) {
+      setGoogleError(e instanceof Error ? e.message : "Failed to load Google reviews");
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [complex.id]);
+
+  function toggleGoogleReviews() {
+    const next = !googleOpen;
+    setGoogleOpen(next);
+    if (next && googleReviews.length === 0) {
+      void loadGoogleReviews();
+    }
+  }
 
   async function submitName(e: React.FormEvent) {
     e.preventDefault();
@@ -210,6 +258,12 @@ export function BuildingPanel({
           {complex.address}
           {complex.zip ? ` · ${complex.zip}` : ""}
         </p>
+
+        <BuildingPanelActions
+          complexId={complex.id}
+          detail={detail}
+          onToast={showToast}
+        />
 
         {detail?.is_rent_stabilized && (
           <div className="mt-2">
@@ -281,16 +335,21 @@ export function BuildingPanel({
           <>
             <div className="mt-4 flex gap-2">
               <ScoreStars
-                label="Community Rating"
-                rating={detail.community_rating}
+                label="spillthe.rent Score"
+                rating={detail.spill_score}
                 count={detail.community_review_count}
-                emptyLabel="No reviews yet"
+                emptyLabel="No score yet"
+                title="Our score combines tenant reviews with official NYC government violation records"
               />
               <ScoreStars
                 label="Google Rating"
                 rating={detail.google_rating}
                 count={detail.google_review_count ?? undefined}
                 emptyLabel="Not listed"
+                onClick={
+                  detail.google_rating != null ? toggleGoogleReviews : undefined
+                }
+                active={googleOpen}
               />
               <div className="flex-1 rounded-xl border border-neutral-800 bg-neutral-900/50 p-3 text-center">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
@@ -313,6 +372,41 @@ export function BuildingPanel({
               </div>
             </div>
 
+            {googleOpen && (
+              <div className="mt-3 rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                    Google reviews
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setGoogleOpen(false)}
+                    className="text-xs text-neutral-500 hover:text-neutral-300"
+                  >
+                    Close
+                  </button>
+                </div>
+                {googleLoading && (
+                  <p className="text-sm text-neutral-500">Loading Google reviews…</p>
+                )}
+                {googleError && (
+                  <p className="text-sm text-red-400">{googleError}</p>
+                )}
+                {!googleLoading && !googleError && googleReviews.length === 0 && (
+                  <p className="text-sm text-neutral-500">
+                    No Google review text stored for this building yet.
+                  </p>
+                )}
+                <ul className="space-y-3">
+                  {googleReviews.map((r) => (
+                    <li key={r.id}>
+                      <ReviewCard review={r} currentUserId={user?.id ?? null} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {hpdScore === "Severe" && (
               <p className="mt-2 text-xs text-red-400">
                 ⚠️ This building has serious open violations on record
@@ -330,7 +424,12 @@ export function BuildingPanel({
               </a>
             )}
 
-            {detail.signals && <BuildingRecordSection signals={detail.signals} />}
+            {detail.signals && (
+              <BuildingRecordSection
+                signals={detail.signals}
+                hpdOpenViolations={hpdOpen}
+              />
+            )}
 
             {detail.landlord && (
               <div className="mt-5 rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
@@ -363,18 +462,31 @@ export function BuildingPanel({
             )}
 
             <div className="mt-5">
-              <p className="text-sm text-neutral-300">
-                {detail.median_rent ? (
-                  <>
-                    Median reported rent:{" "}
-                    <span className="font-semibold text-orange-400">
-                      {formatRent(detail.median_rent)}/mo
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-neutral-500">No rent data yet</span>
-                )}
-              </p>
+              {noRent ? (
+                <div className="rounded-xl border border-dashed border-neutral-700 p-4">
+                  <p className="text-sm font-medium text-neutral-300">
+                    No rent reported here yet.
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    What are you paying? Help future tenants know if they&apos;re
+                    getting a fair deal.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onReportRent(complex)}
+                    className="mt-3 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-neutral-950"
+                  >
+                    💰 Report your rent
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-300">
+                  Median reported rent:{" "}
+                  <span className="font-semibold text-orange-400">
+                    {formatRent(detail.median_rent)}/mo
+                  </span>
+                </p>
+              )}
               {rentBreakdown && (
                 <p className="mt-1 text-xs text-neutral-500">{rentBreakdown}</p>
               )}
@@ -387,10 +499,14 @@ export function BuildingPanel({
                   Report your rent →
                 </button>
                 <Link
-                  href={`/calculator?rent=${detail.median_rent ?? ""}`}
+                  href={
+                    detail.median_rent
+                      ? `/calculator?rent=${detail.median_rent}&from=building&reports=${detail.rent_report_count}`
+                      : "/calculator"
+                  }
                   className="text-orange-500 hover:underline"
                 >
-                  Calculate net effective rent →
+                  Run the numbers on this offer →
                 </Link>
               </div>
             </div>
@@ -425,27 +541,22 @@ export function BuildingPanel({
                 </select>
               </div>
 
-              {isEmpty && (
+              {noReviews && (
                 <div className="mb-4 rounded-xl border border-dashed border-neutral-700 p-6 text-center">
-                  <p className="text-sm text-neutral-400">
-                    Be the first to review this building
+                  <p className="text-sm font-medium text-neutral-300">
+                    No one has spilled the tea on this building yet. 🍵
                   </p>
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center">
-                    <button
-                      type="button"
-                      onClick={() => onRateBuilding(complex)}
-                      className="rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-neutral-950"
-                    >
-                      ⭐ Rate This Building
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onReportRent(complex)}
-                      className="rounded-full border border-neutral-700 px-4 py-2 text-sm text-neutral-200"
-                    >
-                      💰 Report Rent
-                    </button>
-                  </div>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    Lived here? Be the first to drop a review and protect the next
+                    tenant from signing a bad lease.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => onRateBuilding(complex)}
+                    className="mt-4 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-neutral-950"
+                  >
+                    ⭐ Drop the first review
+                  </button>
                 </div>
               )}
 
@@ -480,6 +591,7 @@ export function BuildingPanel({
           ⭐ Rate This Building
         </button>
       </div>
+      {Toast}
     </aside>
   );
 }

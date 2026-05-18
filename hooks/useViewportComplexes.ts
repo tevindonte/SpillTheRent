@@ -5,56 +5,50 @@ import type { LatLngBounds } from "leaflet";
 import { fetchComplexesInBounds, type Complex, type MapFilters } from "@/lib/complexes";
 import {
   expandBounds,
-  getTileKeys,
   isInBounds,
   latLngBoundsToMapBounds,
-  tileToBounds,
   type MapBounds,
 } from "@/lib/map-bounds";
-
-const MAX_CONCURRENT_TILE_FETCHES = 4;
-
-async function runPool<T>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<void>
-): Promise<void> {
-  const queue = [...items];
-  const workers = Array.from(
-    { length: Math.min(limit, queue.length || 1) },
-    async () => {
-      while (queue.length > 0) {
-        const item = queue.shift();
-        if (item !== undefined) await fn(item);
-      }
-    }
-  );
-  await Promise.all(workers);
-}
+import {
+  logMapPerf,
+  mapPerfDelta,
+  MAP_PERF_ENABLED,
+  newMapPerfTrace,
+} from "@/lib/map-perf";
 
 function filtersKey(filters: MapFilters): string {
   return JSON.stringify(filters);
 }
 
+function boundsCacheKey(bounds: MapBounds, filters: MapFilters): string {
+  const f = filtersKey(filters);
+  return [
+    bounds.south.toFixed(4),
+    bounds.west.toFixed(4),
+    bounds.north.toFixed(4),
+    bounds.east.toFixed(4),
+    f,
+  ].join("|");
+}
+
 export function useViewportComplexes(filters: MapFilters = {}) {
-  const cacheRef = useRef<Map<string, Complex>>(new Map());
-  const fetchedTilesRef = useRef<Set<string>>(new Set());
-  const pendingTilesRef = useRef<Set<string>>(new Set());
+  const cacheRef = useRef<Map<string, Complex[]>>(new Map());
   const requestIdRef = useRef(0);
   const filtersRef = useRef(filters);
-  const lastBoundsRef = useRef<{ bounds: LatLngBounds; zoom: number } | null>(null);
+  const lastBoundsRef = useRef<{ bounds: LatLngBounds; zoom: number } | null>(
+    null
+  );
+  const debouncedAtRef = useRef<number | null>(null);
 
   filtersRef.current = filters;
 
   const [complexes, setComplexes] = useState<Complex[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(13);
+  const [zoom, setZoom] = useState(12);
 
   const clearCache = useCallback(() => {
     cacheRef.current.clear();
-    fetchedTilesRef.current.clear();
-    pendingTilesRef.current.clear();
   }, []);
 
   useEffect(() => {
@@ -67,33 +61,57 @@ export function useViewportComplexes(filters: MapFilters = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtersKey(filters)]);
 
-  const syncDisplayList = useCallback((viewport: MapBounds) => {
-    const list: Complex[] = [];
-    cacheRef.current.forEach((complex) => {
-      if (isInBounds(complex.lat, complex.lng, viewport)) {
-        list.push(complex);
-      }
-    });
-    setComplexes(list);
-  }, []);
+  const syncDisplayList = useCallback(
+    (viewport: MapBounds, source: Complex[]) => {
+      const list = source.filter((c) =>
+        isInBounds(c.lat, c.lng, viewport)
+      );
+      setComplexes(list);
+      return list;
+    },
+    []
+  );
 
   const loadForBounds = useCallback(
     async (bounds: LatLngBounds, nextZoom: number) => {
       lastBoundsRef.current = { bounds, zoom: nextZoom };
       const requestId = ++requestIdRef.current;
+      const traceId = newMapPerfTrace();
+      const tLoad = performance.now();
+
       setZoom(nextZoom);
 
       const viewport = latLngBoundsToMapBounds(bounds);
       const fetchBounds = expandBounds(viewport);
-      const tileKeys = getTileKeys(fetchBounds);
-      const missingTiles = tileKeys.filter(
-        (key) =>
-          !fetchedTilesRef.current.has(key) && !pendingTilesRef.current.has(key)
-      );
+      const cacheKey = boundsCacheKey(fetchBounds, filtersRef.current);
 
-      syncDisplayList(viewport);
+      if (debouncedAtRef.current != null && MAP_PERF_ENABLED) {
+        mapPerfDelta(
+          traceId,
+          "bounds_debounced",
+          "load_started",
+          debouncedAtRef.current,
+          tLoad
+        );
+        logMapPerf(traceId, "bounds_debounced", {
+          debounceToLoadMs: Math.round(tLoad - debouncedAtRef.current),
+        });
+      }
+      debouncedAtRef.current = null;
 
-      if (missingTiles.length === 0) {
+      logMapPerf(traceId, "load_started", {
+        zoom: nextZoom,
+        cacheKey,
+        cached: cacheRef.current.has(cacheKey),
+      });
+
+      const cached = cacheRef.current.get(cacheKey);
+      if (cached) {
+        const list = syncDisplayList(viewport, cached);
+        logMapPerf(traceId, "markers_rendered", {
+          count: list.length,
+          fromCache: true,
+        });
         return;
       }
 
@@ -101,31 +119,31 @@ export function useViewportComplexes(filters: MapFilters = {}) {
       setError(null);
 
       try {
-        await runPool(missingTiles, MAX_CONCURRENT_TILE_FETCHES, async (tileKey) => {
-          if (fetchedTilesRef.current.has(tileKey)) return;
+        const batch = await fetchComplexesInBounds(
+          fetchBounds,
+          filtersRef.current,
+          { traceId }
+        );
 
-          pendingTilesRef.current.add(tileKey);
-          try {
-            const tileBounds = tileToBounds(tileKey);
-            const batch = await fetchComplexesInBounds(
-              tileBounds,
-              filtersRef.current
-            );
-            for (const complex of batch) {
-              cacheRef.current.set(complex.id, complex);
-            }
-            fetchedTilesRef.current.add(tileKey);
-          } finally {
-            pendingTilesRef.current.delete(tileKey);
-          }
+        if (requestIdRef.current !== requestId) return;
+
+        cacheRef.current.set(cacheKey, batch);
+        const list = syncDisplayList(viewport, batch);
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (requestIdRef.current !== requestId) return;
+            logMapPerf(traceId, "markers_rendered", {
+              count: list.length,
+              msSinceLoad: Math.round(performance.now() - tLoad),
+            });
+          });
         });
-
-        if (requestIdRef.current === requestId) {
-          syncDisplayList(viewport);
-        }
       } catch (e) {
         if (requestIdRef.current === requestId) {
-          setError(e instanceof Error ? e.message : "Failed to load buildings");
+          setError(
+            e instanceof Error ? e.message : "Failed to load buildings"
+          );
         }
       } finally {
         if (requestIdRef.current === requestId) {
@@ -136,5 +154,17 @@ export function useViewportComplexes(filters: MapFilters = {}) {
     [syncDisplayList]
   );
 
-  return { complexes, loading, error, zoom, loadForBounds, clearCache };
+  const noteBoundsDebounced = useCallback(() => {
+    debouncedAtRef.current = performance.now();
+  }, []);
+
+  return {
+    complexes,
+    loading,
+    error,
+    zoom,
+    loadForBounds,
+    clearCache,
+    noteBoundsDebounced,
+  };
 }

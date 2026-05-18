@@ -16,6 +16,7 @@ import requests
 from tqdm import tqdm
 
 from address_utils import build_address_from_parts, ComplexAddressIndex
+from borough_config import add_borough_cli_args, get_borough
 from supabase_batch import batch_insert, recompute_hpd_scores
 from supabase_client import PIPELINE_DIR, fetch_all_complexes, get_supabase_client
 from nyc_ingest_common import log_unmatched
@@ -91,10 +92,10 @@ def row_to_violation(row: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def fetch_hpd_rows(limit: int | None) -> list[dict[str, Any]]:
+def fetch_hpd_rows(limit: int | None, hpd_boro: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     offset = 0
-    where = "boro='MANHATTAN' AND class in ('A','B','C')"
+    where = f"boro='{hpd_boro}' AND class in ('A','B','C')"
 
     with tqdm(desc="Fetching HPD violations", unit=" rows") as bar:
         while True:
@@ -130,6 +131,7 @@ def fetch_hpd_rows(limit: int | None) -> list[dict[str, Any]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    add_borough_cli_args(parser, default="MN")
     parser.add_argument("--limit", type=int, default=1000, help="Max violations to process")
     parser.add_argument(
         "--scores-only",
@@ -151,11 +153,12 @@ def main() -> None:
         print("Done (scores only).")
         return
 
+    borough = get_borough(args.borough)
     complexes = fetch_all_complexes(client)
     index = ComplexAddressIndex(complexes)
     print(f"Loaded {len(complexes)} complexes for address matching.")
 
-    violations = fetch_hpd_rows(args.limit)
+    violations = fetch_hpd_rows(args.limit, borough.hpd_boro)
     print(f"Prepared {len(violations)} violations.")
 
     unmatched: list[dict[str, str]] = []

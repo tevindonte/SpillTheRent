@@ -8,6 +8,13 @@ const FLAG_LABELS = Object.fromEntries(
 ) as Record<string, string>;
 
 type SortOption = "most_recent" | "most_helpful" | "lowest_rated" | "highest_rated";
+type SourceFilter = "user" | "google";
+
+const REVIEW_SELECT = `
+  id, rating, review_text, review_date, created_at, source, red_flags, red_flag_other,
+  rent_amount, bedrooms, user_id,
+  profiles:user_id ( handle )
+`;
 
 export async function GET(
   request: NextRequest,
@@ -16,9 +23,14 @@ export async function GET(
   const complexId = params.id;
   const sort = (request.nextUrl.searchParams.get("sort") ??
     "most_recent") as SortOption;
+  const source = (request.nextUrl.searchParams.get("source") ?? "user") as SourceFilter;
   const page = Math.max(1, parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10));
   const limit = Math.min(20, Math.max(1, parseInt(request.nextUrl.searchParams.get("limit") ?? "5", 10)));
   const offset = (page - 1) * limit;
+
+  if (source !== "user" && source !== "google") {
+    return NextResponse.json({ error: "Invalid source" }, { status: 400 });
+  }
 
   const supabase = createAdminClient();
   const { user } = await getSessionUser();
@@ -27,24 +39,20 @@ export async function GET(
     .from("reviews")
     .select("id", { count: "exact", head: true })
     .eq("complex_id", complexId)
-    .eq("source", "user");
+    .eq("source", source);
 
   let query = supabase
     .from("reviews")
-    .select(
-      `
-      id, rating, review_text, review_date, created_at, red_flags, red_flag_other,
-      rent_amount, bedrooms, is_anonymous, user_id,
-      profiles:user_id ( handle )
-    `
-    )
+    .select(REVIEW_SELECT)
     .eq("complex_id", complexId)
-    .eq("source", "user");
+    .eq("source", source);
 
   if (sort === "lowest_rated") {
     query = query.order("rating", { ascending: true, nullsFirst: false });
   } else if (sort === "highest_rated") {
     query = query.order("rating", { ascending: false, nullsFirst: false });
+  } else if (source === "google") {
+    query = query.order("review_date", { ascending: false, nullsFirst: false });
   } else {
     query = query.order("created_at", { ascending: false });
   }
@@ -61,28 +69,32 @@ export async function GET(
   const userVotes: Record<string, string> = {};
   const commentCounts: Record<string, number> = {};
 
-  if (reviewIds.length > 0) {
-    const { data: votes } = await supabase
+  if (source === "user" && reviewIds.length > 0) {
+    const { data: votes, error: votesError } = await supabase
       .from("review_votes")
       .select("review_id, vote, user_id")
       .in("review_id", reviewIds);
 
-    for (const v of votes ?? []) {
-      if (!voteCounts[v.review_id]) voteCounts[v.review_id] = { up: 0, down: 0 };
-      if (v.vote === "up") voteCounts[v.review_id].up += 1;
-      else voteCounts[v.review_id].down += 1;
-      if (user?.id && v.user_id === user.id) {
-        userVotes[v.review_id] = v.vote;
+    if (!votesError) {
+      for (const v of votes ?? []) {
+        if (!voteCounts[v.review_id]) voteCounts[v.review_id] = { up: 0, down: 0 };
+        if (v.vote === "up") voteCounts[v.review_id].up += 1;
+        else voteCounts[v.review_id].down += 1;
+        if (user?.id && v.user_id === user.id) {
+          userVotes[v.review_id] = v.vote;
+        }
       }
     }
 
-    const { data: comments } = await supabase
+    const { data: comments, error: commentsError } = await supabase
       .from("review_comments")
       .select("review_id")
       .in("review_id", reviewIds);
 
-    for (const c of comments ?? []) {
-      commentCounts[c.review_id] = (commentCounts[c.review_id] ?? 0) + 1;
+    if (!commentsError) {
+      for (const c of comments ?? []) {
+        commentCounts[c.review_id] = (commentCounts[c.review_id] ?? 0) + 1;
+      }
     }
   }
 
@@ -99,13 +111,14 @@ export async function GET(
 
     return {
       id: row.id,
+      source: row.source as SourceFilter,
       rating: row.rating,
       review_text: row.review_text,
       review_date: row.review_date ?? row.created_at,
       red_flags: flags,
       rent_amount: row.rent_amount,
       bedrooms: row.bedrooms,
-      is_anonymous: row.is_anonymous,
+      is_anonymous: !row.user_id,
       author_handle: handle ?? null,
       user_id: row.user_id,
       votes_up: voteCounts[row.id]?.up ?? 0,
@@ -116,7 +129,7 @@ export async function GET(
     };
   });
 
-  if (sort === "most_helpful") {
+  if (sort === "most_helpful" && source === "user") {
     mapped.sort((a, b) => b.helpful_score - a.helpful_score);
   }
 
@@ -126,5 +139,6 @@ export async function GET(
     page,
     limit,
     has_more: (totalCount ?? 0) > page * limit,
+    source,
   });
 }

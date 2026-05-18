@@ -35,14 +35,32 @@ export function Navbar() {
   return (
     <header className="fixed left-0 right-0 top-0 z-[2000] flex h-12 items-center justify-between border-b border-neutral-800/80 bg-[#0a0a0a]/90 px-4 backdrop-blur-md">
       <Link href="/" className="text-sm font-semibold tracking-tight text-orange-500">
-        SpillTheRent
+        spillthe.rent
       </Link>
       <nav className="flex items-center gap-3 text-sm">
         <Link
-          href="/calculator"
+          href="/leaderboard"
           className="hidden text-neutral-400 hover:text-neutral-200 sm:inline"
         >
-          Calculator
+          Leaderboard
+        </Link>
+        <Link
+          href="/faq"
+          className="hidden text-neutral-400 hover:text-neutral-200 md:inline"
+        >
+          FAQ
+        </Link>
+        <Link
+          href="/about"
+          className="text-neutral-400 hover:text-neutral-200"
+        >
+          About
+        </Link>
+        <Link
+          href="/calculator"
+          className="hidden text-neutral-400 hover:text-neutral-200 lg:inline"
+        >
+          The Receipt
         </Link>
         {loading ? (
           <span className="text-neutral-600">…</span>

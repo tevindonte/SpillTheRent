@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
+import { applyBoroughAreaFilter, type BoroughArea } from "@/lib/map-boroughs";
 
 export type MapFilters = {
+  boroughArea?: BoroughArea;
   rentStabilizedOnly?: boolean;
   hasHpdViolations?: boolean;
   minGoogleRating?: number;
@@ -21,6 +23,10 @@ export type Complex = {
   hpd_open_violations?: number;
   hpd_violation_score?: string | null;
   is_rent_stabilized?: boolean;
+  cached_median_rent?: number | null;
+  cached_review_count?: number;
+  cached_community_score?: number | null;
+  cached_signal_count?: number;
   lat: number;
   lng: number;
 };
@@ -42,6 +48,7 @@ type MapSummaryRow = {
   name: string;
   address: string | null;
   borough: string | null;
+  neighborhood?: string | null;
   zip: string | null;
   units: number | null;
   google_rating: number | null;
@@ -176,7 +183,7 @@ function rowToComplex(row: MapSummaryRow): Complex {
 }
 
 const MAP_SUMMARY_COLUMNS =
-  "id, name, address, borough, zip, units, google_rating, google_review_count, street_view_url, lat, lng, median_rent, review_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+  "id, name, address, borough, neighborhood, zip, units, google_rating, google_review_count, street_view_url, lat, lng, median_rent, review_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
 
 async function fetchMapSummaryPage(
   supabase: ReturnType<typeof createClient>,
@@ -200,6 +207,7 @@ async function fetchMapSummaryPage(
   if (options.east != null) query = query.lte("lng", options.east);
 
   const f = options.filters;
+  query = applyBoroughAreaFilter(query, f?.boroughArea);
   if (f?.rentStabilizedOnly) query = query.eq("is_rent_stabilized", true);
   if (f?.hasHpdViolations) query = query.gt("hpd_open_violations", 0);
   if (f?.minGoogleRating != null && f.minGoogleRating > 0) {
@@ -308,7 +316,80 @@ export async function fetchComplexes(): Promise<Complex[]> {
   return fetchFromCoordinatesTable(supabase);
 }
 
-/** Fetch complexes inside a bounding box (paginated). */
+type BoundsRow = {
+  id: string;
+  name: string;
+  address: string | null;
+  borough: string | null;
+  zip: string | null;
+  units: number | null;
+  google_rating: number | null;
+  google_review_count: number | null;
+  street_view_url: string | null;
+  lat: number;
+  lng: number;
+  hpd_open_violations?: number | null;
+  is_rent_stabilized?: boolean | null;
+  cached_median_rent?: number | null;
+  cached_review_count?: number | null;
+  cached_community_score?: number | null;
+  cached_signal_count?: number | null;
+};
+
+function boundsRowToComplex(row: BoundsRow): Complex {
+  const lat = Number(row.lat);
+  const lng = Number(row.lng);
+  return {
+    id: row.id,
+    name: row.name,
+    address: row.address,
+    borough: row.borough,
+    zip: row.zip,
+    units: row.units,
+    google_rating: row.google_rating,
+    google_review_count: row.google_review_count,
+    street_view_url: row.street_view_url ?? null,
+    median_rent:
+      row.cached_median_rent != null ? Number(row.cached_median_rent) : null,
+    lat,
+    lng,
+    review_count: row.cached_review_count ?? 0,
+    hpd_open_violations: row.hpd_open_violations ?? 0,
+    hpd_violation_score: null,
+    is_rent_stabilized: row.is_rent_stabilized ?? false,
+    cached_median_rent:
+      row.cached_median_rent != null ? Number(row.cached_median_rent) : null,
+    cached_review_count: row.cached_review_count ?? 0,
+    cached_community_score:
+      row.cached_community_score != null
+        ? Number(row.cached_community_score)
+        : null,
+    cached_signal_count: row.cached_signal_count ?? 0,
+  };
+}
+
+function boundsToSearchParams(
+  bounds: { south: number; north: number; west: number; east: number },
+  filters?: MapFilters
+): URLSearchParams {
+  const params = new URLSearchParams({
+    south: String(bounds.south),
+    north: String(bounds.north),
+    west: String(bounds.west),
+    east: String(bounds.east),
+  });
+  if (filters?.boroughArea && filters.boroughArea !== "all") {
+    params.set("boroughArea", filters.boroughArea);
+  }
+  if (filters?.rentStabilizedOnly) params.set("rentStabilizedOnly", "true");
+  if (filters?.hasHpdViolations) params.set("hasHpdViolations", "true");
+  if (filters?.minGoogleRating != null && filters.minGoogleRating > 0) {
+    params.set("minGoogleRating", String(filters.minGoogleRating));
+  }
+  return params;
+}
+
+/** Fetch complexes inside a bounding box (single PostGIS RPC via API). */
 export async function fetchComplexesInBounds(
   bounds: {
     south: number;
@@ -316,34 +397,53 @@ export async function fetchComplexesInBounds(
     west: number;
     east: number;
   },
-  filters?: MapFilters
+  filters?: MapFilters,
+  options?: { traceId?: string }
 ): Promise<Complex[]> {
-  const supabase = createClient();
-  const fromView = await fetchFromMapSummary(supabase, bounds, filters);
-  if (fromView.complexes) return fromView.complexes;
+  const { logMapPerf } = await import("@/lib/map-perf");
+  const traceId = options?.traceId;
+  const tRequest = performance.now();
 
-  const all = await fetchFromCoordinatesTable(supabase);
-  return all.filter((c) => {
-    if (
-      c.lat < bounds.south ||
-      c.lat > bounds.north ||
-      c.lng < bounds.west ||
-      c.lng > bounds.east
-    ) {
-      return false;
-    }
-    if (filters?.rentStabilizedOnly && !c.is_rent_stabilized) return false;
-    if (filters?.hasHpdViolations && !(c.hpd_open_violations && c.hpd_open_violations > 0))
-      return false;
-    if (
-      filters?.minGoogleRating != null &&
-      filters.minGoogleRating > 0 &&
-      (c.google_rating == null || c.google_rating < filters.minGoogleRating)
-    ) {
-      return false;
-    }
-    return true;
-  });
+  if (traceId) {
+    logMapPerf(traceId, "request_sent", {
+      bounds,
+      filters,
+      endpoint: "/api/complexes/bounds",
+    });
+  }
+
+  const headers: HeadersInit = {};
+  if (traceId) headers["x-map-trace-id"] = traceId;
+
+  const res = await fetch(
+    `/api/complexes/bounds?${boundsToSearchParams(bounds, filters)}`,
+    { headers }
+  );
+
+  if (traceId) {
+    logMapPerf(traceId, "response_received", {
+      ms: Math.round(performance.now() - tRequest),
+      status: res.status,
+    });
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(
+      (body as { error?: string }).error ?? "Failed to load buildings"
+    );
+  }
+
+  const body = (await res.json()) as {
+    complexes?: BoundsRow[];
+    _perf?: { queryMs?: number; rowCount?: number };
+  };
+
+  if (traceId && body._perf) {
+    console.info("[map-perf] server query", { traceId, ...body._perf });
+  }
+
+  return (body.complexes ?? []).map(boundsRowToComplex);
 }
 
 export type ComplexDetail = {

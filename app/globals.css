@@ -68,6 +68,23 @@ body {
   box-shadow: 0 0 0 2px rgb(250 250 250 / 0.25);
 }
 
+.rent-pill-marker__signal {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #f97316;
+  border: 2px solid #0a0a0a;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 6px rgb(249 115 22 / 0.6);
+}
+
+.rent-pill-marker {
+  position: relative;
+}
+
 @keyframes slide-in-panel {
   from {
     transform: translateY(100%);
