@@ -6,10 +6,13 @@ import type { Renderer } from "leaflet";
 import type { Complex } from "@/lib/complexes";
 import { ratingColor } from "@/lib/complexes";
 import { formatRent } from "@/lib/format";
+import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
+import { attachComplexToLayer, mapScore } from "@/lib/map-marker-style";
 import { createRentPillIcon } from "@/lib/map-markers";
 
 type ComplexMarkerProps = {
   complex: Complex;
+  zoom: number;
   selected?: boolean;
   onSelect: (complex: Complex) => void;
   renderer?: Renderer;
@@ -17,20 +20,21 @@ type ComplexMarkerProps = {
 
 export function ComplexMarker({
   complex,
+  zoom,
   selected = false,
   onSelect,
   renderer,
 }: ComplexMarkerProps) {
+  const showDetail = zoom >= MARKER_ZOOM_THRESHOLD;
   const medianRent = complex.cached_median_rent ?? complex.median_rent;
-  const rentLabel = formatRent(medianRent);
-  const signalHigh = (complex.cached_signal_count ?? 0) > 3;
-  const mapScore =
-    complex.cached_community_score != null
-      ? complex.cached_community_score
-      : complex.google_rating;
+  const rentLabel = showDetail ? formatRent(medianRent) : null;
+  const signalHigh = showDetail && (complex.cached_signal_count ?? 0) > 3;
+  const score = mapScore(complex);
+  const color = ratingColor(score);
 
   const pillIcon = useMemo(
-    () => (rentLabel ? createRentPillIcon(rentLabel, selected, signalHigh) : null),
+    () =>
+      rentLabel ? createRentPillIcon(rentLabel, selected, signalHigh) : null,
     [rentLabel, selected, signalHigh]
   );
 
@@ -48,11 +52,10 @@ export function ComplexMarker({
         icon={pillIcon}
         eventHandlers={clickHandlers}
         zIndexOffset={selected ? 1000 : 0}
+        ref={(ref) => attachComplexToLayer(ref, complex)}
       />
     );
   }
-
-  const color = ratingColor(mapScore);
 
   return (
     <>
@@ -68,6 +71,7 @@ export function ComplexMarker({
           opacity: 0.95,
         }}
         eventHandlers={clickHandlers}
+        ref={(ref) => attachComplexToLayer(ref, complex)}
       />
       {signalHigh && (
         <CircleMarker

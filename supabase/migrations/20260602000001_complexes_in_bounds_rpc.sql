@@ -1,4 +1,17 @@
 -- Fast viewport query: GIST index on coordinates via && envelope (no per-tile fan-out).
+-- NOTE: Superseded by 20260603000001 (cached columns). Do not re-run after that migration.
+-- If you see 42P13 "cannot change return type", run 20260603000002 instead.
+
+drop function if exists public.complexes_in_bounds(
+  double precision,
+  double precision,
+  double precision,
+  double precision,
+  text,
+  boolean,
+  boolean,
+  double precision
+);
 
 create or replace function public.complexes_in_bounds(
   min_lat double precision,

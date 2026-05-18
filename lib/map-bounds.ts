@@ -10,7 +10,8 @@ export type MapBounds = {
 export const MAP_TILE_SIZE = 0.012;
 
 /** Fixed degree buffer around viewport so markers don't pop in late. */
-export const BOUNDS_BUFFER_DEGREES = 0.05;
+/** Wider prefetch reduces empty edges while panning before the next bounds fetch. */
+export const BOUNDS_BUFFER_DEGREES = 0.09;
 export const MARKER_ZOOM_THRESHOLD = 14;
 export const BOUNDS_DEBOUNCE_MS = 300;
 

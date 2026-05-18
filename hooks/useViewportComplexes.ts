@@ -31,6 +31,51 @@ function boundsCacheKey(bounds: MapBounds, filters: MapFilters): string {
   ].join("|");
 }
 
+function parseCacheKeyBounds(key: string): MapBounds | null {
+  const parts = key.split("|");
+  if (parts.length < 4) return null;
+  const south = parseFloat(parts[0]);
+  const west = parseFloat(parts[1]);
+  const north = parseFloat(parts[2]);
+  const east = parseFloat(parts[3]);
+  if (
+    !Number.isFinite(south) ||
+    !Number.isFinite(west) ||
+    !Number.isFinite(north) ||
+    !Number.isFinite(east)
+  ) {
+    return null;
+  }
+  return { south, west, north, east };
+}
+
+function boundsIntersect(a: MapBounds, b: MapBounds): boolean {
+  return (
+    a.south <= b.north &&
+    a.north >= b.south &&
+    a.west <= b.east &&
+    a.east >= b.west
+  );
+}
+
+function mergeComplexesFromCache(
+  cache: Map<string, Complex[]>,
+  target: MapBounds
+): Complex[] {
+  const byId = new Map<string, Complex>();
+  for (const [key, list] of Array.from(cache.entries())) {
+    const cachedBounds = parseCacheKeyBounds(key);
+    if (!cachedBounds || !boundsIntersect(cachedBounds, target)) continue;
+    for (const c of list) {
+      byId.set(c.id, c);
+    }
+  }
+  return Array.from(byId.values());
+}
+
+/** Slight display bleed past viewport edges to avoid visible gaps while panning. */
+const DISPLAY_EDGE_BUFFER = 0.02;
+
 export function useViewportComplexes(filters: MapFilters = {}) {
   const cacheRef = useRef<Map<string, Complex[]>>(new Map());
   const requestIdRef = useRef(0);
@@ -63,8 +108,9 @@ export function useViewportComplexes(filters: MapFilters = {}) {
 
   const syncDisplayList = useCallback(
     (viewport: MapBounds, source: Complex[]) => {
+      const displayBounds = expandBounds(viewport, DISPLAY_EDGE_BUFFER);
       const list = source.filter((c) =>
-        isInBounds(c.lat, c.lng, viewport)
+        isInBounds(c.lat, c.lng, displayBounds)
       );
       setComplexes(list);
       return list;
@@ -113,6 +159,14 @@ export function useViewportComplexes(filters: MapFilters = {}) {
           fromCache: true,
         });
         return;
+      }
+
+      const prefetched = mergeComplexesFromCache(
+        cacheRef.current,
+        fetchBounds
+      );
+      if (prefetched.length > 0) {
+        syncDisplayList(viewport, prefetched);
       }
 
       setLoading(true);

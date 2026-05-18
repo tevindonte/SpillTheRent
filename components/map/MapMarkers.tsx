@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { CircleMarker } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import L from "leaflet";
 import type { Complex } from "@/lib/complexes";
-import { ratingColor } from "@/lib/complexes";
 import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
+import { createScoreClusterIcon } from "@/lib/map-marker-style";
 import { ComplexMarker } from "./ComplexMarker";
 
 type MapMarkersProps = {
@@ -27,55 +26,34 @@ export function MapMarkers({
     []
   );
 
-  if (zoom >= MARKER_ZOOM_THRESHOLD) {
-    return (
-      <>
-        {complexes.map((complex) => (
-          <ComplexMarker
-            key={complex.id}
-            complex={complex}
-            selected={selectedId === complex.id}
-            onSelect={onSelect}
-            renderer={canvasRenderer}
-          />
-        ))}
-      </>
-    );
-  }
+  const iconCreateFunction = useMemo(
+    () => (cluster: Parameters<typeof createScoreClusterIcon>[0]) =>
+      createScoreClusterIcon(cluster),
+    []
+  );
 
   return (
     <MarkerClusterGroup
       chunkedLoading
-      chunkInterval={150}
-      chunkDelay={30}
-      maxClusterRadius={50}
+      chunkInterval={200}
+      maxClusterRadius={55}
+      disableClusteringAtZoom={MARKER_ZOOM_THRESHOLD}
       showCoverageOnHover={false}
       spiderfyOnMaxZoom={false}
       zoomToBoundsOnClick
-      removeOutsideVisibleBounds
+      removeOutsideVisibleBounds={false}
+      iconCreateFunction={iconCreateFunction}
     >
-      {complexes.map((complex) => {
-        const color = ratingColor(complex.google_rating);
-        const selected = selectedId === complex.id;
-        return (
-          <CircleMarker
-            key={complex.id}
-            center={[complex.lat, complex.lng]}
-            radius={selected ? 8 : 6}
-            renderer={canvasRenderer}
-            pathOptions={{
-              color: selected ? "#fafafa" : color,
-              fillColor: color,
-              fillOpacity: 0.9,
-              weight: selected ? 2 : 1.5,
-              opacity: 0.95,
-            }}
-            eventHandlers={{
-              click: () => onSelect(complex),
-            }}
-          />
-        );
-      })}
+      {complexes.map((complex) => (
+        <ComplexMarker
+          key={complex.id}
+          complex={complex}
+          zoom={zoom}
+          selected={selectedId === complex.id}
+          onSelect={onSelect}
+          renderer={canvasRenderer}
+        />
+      ))}
     </MarkerClusterGroup>
   );
 }

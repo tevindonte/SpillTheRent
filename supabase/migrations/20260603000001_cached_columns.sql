@@ -158,7 +158,7 @@ create trigger pricing_history_recalculate_cache
   for each row
   execute function public.trigger_recalculate_complex_cache();
 
--- Extend bounds RPC with cached columns
+-- Extend bounds RPC with cached columns (must DROP — CREATE OR REPLACE cannot change OUT columns)
 drop function if exists public.complexes_in_bounds(
   double precision,
   double precision,
@@ -169,6 +169,21 @@ drop function if exists public.complexes_in_bounds(
   boolean,
   double precision
 );
+
+-- Drop any overload/signature variant of complexes_in_bounds
+do $$
+declare
+  r record;
+begin
+  for r in
+    select pg_get_function_identity_arguments(p.oid) as args
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'complexes_in_bounds'
+  loop
+    execute format('drop function if exists public.complexes_in_bounds(%s)', r.args);
+  end loop;
+end $$;
 
 create or replace function public.complexes_in_bounds(
   min_lat double precision,
