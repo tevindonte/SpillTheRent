@@ -14,24 +14,6 @@ import {
 
 const MAX_CONCURRENT_TILE_FETCHES = 4;
 
-async function runPool<T>(
-  items: T[],
-  limit: number,
-  fn: (item: T) => Promise<void>
-): Promise<void> {
-  const queue = [...items];
-  const workers = Array.from(
-    { length: Math.min(limit, queue.length || 1) },
-    async () => {
-      while (queue.length > 0) {
-        const item = queue.shift();
-        if (item !== undefined) await fn(item);
-      }
-    }
-  );
-  await Promise.all(workers);
-}
-
 function filtersKey(filters: MapFilters): string {
   return JSON.stringify(filters);
 }
@@ -103,7 +85,7 @@ export function useViewportComplexes(filters: MapFilters = {}) {
       setError(null);
 
       try {
-        await runPool(missingTiles, MAX_CONCURRENT_TILE_FETCHES, async (tileKey) => {
+        const fetchTile = async (tileKey: string) => {
           if (fetchedTilesRef.current.has(tileKey)) return;
 
           pendingTilesRef.current.add(tileKey);
@@ -120,10 +102,19 @@ export function useViewportComplexes(filters: MapFilters = {}) {
           } finally {
             pendingTilesRef.current.delete(tileKey);
           }
-        });
+        };
 
-        if (requestIdRef.current === requestId) {
-          syncDisplayList(viewport);
+        for (
+          let i = 0;
+          i < missingTiles.length;
+          i += MAX_CONCURRENT_TILE_FETCHES
+        ) {
+          const chunk = missingTiles.slice(i, i + MAX_CONCURRENT_TILE_FETCHES);
+          await Promise.all(chunk.map((tileKey) => fetchTile(tileKey)));
+
+          if (requestIdRef.current === requestId) {
+            syncDisplayList(viewport);
+          }
         }
       } catch (e) {
         if (requestIdRef.current === requestId) {
