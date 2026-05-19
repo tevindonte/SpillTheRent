@@ -7,6 +7,7 @@ import { formatRelativeTime } from "@/lib/relative-time";
 import { getAnonymousVoteToken } from "@/lib/vote-token";
 import { useAuth } from "@/hooks/useAuth";
 import { formatRent } from "@/lib/format";
+import { SourceBadge } from "./SourceBadge";
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -40,6 +41,7 @@ export function ReviewCard({
   currentUserId: string | null;
 }) {
   const isGoogle = review.source === "google";
+  const isExternal = review.source != null && review.source !== "user";
   const { user } = useAuth();
   const [votesUp, setVotesUp] = useState(review.votes_up);
   const [votesDown, setVotesDown] = useState(review.votes_down);
@@ -133,13 +135,17 @@ export function ReviewCard({
       </div>
 
       <p className="mb-1 text-xs text-neutral-500">
-        {isGoogle
-          ? "Google review"
-          : review.is_anonymous
-            ? "Anonymous"
-            : review.author_handle
-              ? `@${review.author_handle}`
-              : "Tenant"}
+        <span className="inline-flex items-center gap-2">
+          {isExternal ? (
+            <SourceBadge source={review.source} />
+          ) : review.is_anonymous ? (
+            "Anonymous"
+          ) : review.author_handle ? (
+            `@${review.author_handle}`
+          ) : (
+            "Tenant"
+          )}
+        </span>
       </p>
 
       {review.review_text && (

@@ -9,13 +9,15 @@ import {
   type BuildingDetail,
   type PanelReview,
 } from "@/lib/building-detail";
-import { formatRent } from "@/lib/format";
 import { hpdOnlineUrl, hpdScoreColor, portfolioScoreColor } from "@/lib/hpd";
 import { streetViewProxyUrl, streetViewUrlFromStored } from "@/lib/streetview";
 import { useAuth } from "@/hooks/useAuth";
 import { BuildingRecordSection } from "./panel/BuildingRecordSection";
 import { ReviewCard } from "./panel/ReviewCard";
 import { BuildingPanelActions } from "./BuildingPanelActions";
+import { ShouldISignSummary } from "./panel/ShouldISignSummary";
+import { RentRealityBlock } from "./panel/RentRealityBlock";
+import { DataProvenance } from "./panel/DataProvenance";
 import { useToast } from "@/hooks/useToast";
 
 type SortOption =
@@ -30,6 +32,7 @@ type BuildingPanelProps = {
   onClose: () => void;
   onRateBuilding: (complex: Complex) => void;
   onReportRent: (complex: Complex) => void;
+  onCompareChange?: () => void;
 };
 
 function ScoreStars({
@@ -100,6 +103,7 @@ export function BuildingPanel({
   onClose,
   onRateBuilding,
   onReportRent,
+  onCompareChange,
 }: BuildingPanelProps) {
   const { user } = useAuth();
   const { showToast, Toast } = useToast();
@@ -169,7 +173,6 @@ export function BuildingPanel({
   const hpdScore = detail?.hpd_violation_score;
   const hpdOpen = detail?.hpd_open_violations ?? 0;
   const noReviews = detail != null && detail.community_review_count === 0;
-  const noRent = detail != null && !detail.median_rent;
 
   const loadGoogleReviews = useCallback(async () => {
     setGoogleLoading(true);
@@ -212,13 +215,6 @@ export function BuildingPanel({
     if (res.ok) setNameFormOpen(false);
   }
 
-  const rentBreakdown = detail?.rent_by_bedroom
-    ? Object.entries(detail.rent_by_bedroom)
-        .filter(([, v]) => v != null)
-        .map(([k, v]) => `${k}: ${formatRent(v)}`)
-        .join(" · ")
-    : null;
-
   return (
     <aside
       className="pointer-events-auto flex h-full w-full flex-col border-neutral-800 bg-neutral-950/98 shadow-2xl backdrop-blur-md animate-slide-in-panel md:w-[420px] md:border-l"
@@ -260,10 +256,20 @@ export function BuildingPanel({
         </p>
 
         <BuildingPanelActions
-          complexId={complex.id}
+          complex={complex}
           detail={detail}
           onToast={showToast}
+          onCompareChange={onCompareChange}
         />
+
+        {detail && !loading && <ShouldISignSummary detail={detail} />}
+
+        {detail?.verified === false && (
+          <p className="mt-2 text-[10px] text-amber-600/90">
+            Unverified building — data from community import; confirm address on
+            site.
+          </p>
+        )}
 
         {detail?.is_rent_stabilized && (
           <div className="mt-2">
@@ -461,55 +467,19 @@ export function BuildingPanel({
               </div>
             )}
 
-            <div className="mt-5">
-              {noRent ? (
-                <div className="rounded-xl border border-dashed border-neutral-700 p-4">
-                  <p className="text-sm font-medium text-neutral-300">
-                    No rent reported here yet.
-                  </p>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    What are you paying? Help future tenants know if they&apos;re
-                    getting a fair deal.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => onReportRent(complex)}
-                    className="mt-3 rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-neutral-950"
-                  >
-                    💰 Report your rent
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm text-neutral-300">
-                  Median reported rent:{" "}
-                  <span className="font-semibold text-orange-400">
-                    {formatRent(detail.median_rent)}/mo
-                  </span>
-                </p>
-              )}
-              {rentBreakdown && (
-                <p className="mt-1 text-xs text-neutral-500">{rentBreakdown}</p>
-              )}
-              <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                <button
-                  type="button"
-                  onClick={() => onReportRent(complex)}
-                  className="text-orange-500 hover:underline"
-                >
-                  Report your rent →
-                </button>
-                <Link
-                  href={
-                    detail.median_rent
-                      ? `/calculator?rent=${detail.median_rent}&from=building&reports=${detail.rent_report_count}`
-                      : "/calculator"
-                  }
-                  className="text-orange-500 hover:underline"
-                >
-                  Run the numbers on this offer →
-                </Link>
-              </div>
-            </div>
+            <RentRealityBlock
+              detail={detail}
+              onReportRent={() => onReportRent(complex)}
+            />
+            {detail.median_rent != null && (
+              <Link
+                href={`/calculator?rent=${detail.median_rent}&from=building&reports=${detail.rent_report_count}`}
+                className="mt-1 inline-block text-xs text-orange-500 hover:underline"
+              >
+                Run the numbers on this offer →
+              </Link>
+            )}
+            <DataProvenance />
 
             {detail.red_flags.length > 0 && (
               <div className="mt-5 flex flex-wrap gap-1.5">

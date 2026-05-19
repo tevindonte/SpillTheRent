@@ -58,6 +58,10 @@ type MapSummaryRow = {
   lng: number;
   median_rent: number | null;
   review_count: number | null;
+  cached_median_rent?: number | null;
+  cached_review_count?: number | null;
+  cached_community_score?: number | null;
+  cached_signal_count?: number | null;
   hpd_open_violations?: number | null;
   hpd_violation_score?: string | null;
   is_rent_stabilized?: boolean | null;
@@ -179,11 +183,15 @@ function rowToComplex(row: MapSummaryRow): Complex {
     hpd_open_violations: row.hpd_open_violations ?? 0,
     hpd_violation_score: row.hpd_violation_score ?? null,
     is_rent_stabilized: row.is_rent_stabilized ?? false,
+    cached_median_rent: row.cached_median_rent ?? row.median_rent,
+    cached_review_count: row.cached_review_count ?? row.review_count ?? 0,
+    cached_community_score: row.cached_community_score ?? null,
+    cached_signal_count: row.cached_signal_count ?? 0,
   };
 }
 
 const MAP_SUMMARY_COLUMNS =
-  "id, name, address, borough, neighborhood, zip, units, google_rating, google_review_count, street_view_url, lat, lng, median_rent, review_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+  "id, name, address, borough, neighborhood, zip, units, google_rating, google_review_count, street_view_url, lat, lng, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
 
 async function fetchMapSummaryPage(
   supabase: ReturnType<typeof createClient>,

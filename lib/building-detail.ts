@@ -24,7 +24,10 @@ export type BuildingDetail = {
   name: string;
   address: string | null;
   borough: string | null;
+  neighborhood: string | null;
   zip: string | null;
+  verified?: boolean;
+  data_source?: string | null;
   units: number | null;
   google_rating: number | null;
   google_review_count: number | null;
@@ -50,7 +53,7 @@ export type BuildingDetail = {
 
 export type PanelReview = {
   id: string;
-  source?: "user" | "google";
+  source?: "user" | "google" | "apartments_com" | "reddit";
   rating: number | null;
   review_text: string | null;
   review_date: string | null;

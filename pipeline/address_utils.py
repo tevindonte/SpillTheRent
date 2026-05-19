@@ -70,7 +70,36 @@ class ComplexAddressIndex:
                 self._addresses.append(addr)
                 self._by_house[_house_number_key(addr)].append(addr)
 
-    def _fuzzy_match(self, norm: str, candidates: list[str], threshold: int) -> str | None:
+    def match(self, address: str, threshold: int = 85) -> str | None:
+        complex_id, _score, _addr = self.match_with_score(address, threshold=threshold)
+        return complex_id
+
+    def match_with_score(
+        self, address: str, threshold: int = 85
+    ) -> tuple[str | None, int, str | None]:
+        """Return (complex_id, fuzzy score 0–100, matched normalized address)."""
+        norm = normalize_address(address)
+        if not norm:
+            return None, 0, None
+        if norm in self._id_by_address:
+            return self._id_by_address[norm], 100, norm
+        if not self._addresses:
+            return None, 0, None
+
+        house_key = _house_number_key(norm)
+        candidates = self._by_house.get(house_key, [])
+        result = self._extract_best(norm, candidates, threshold)
+        if result is not None:
+            return result
+        if candidates and len(candidates) < len(self._addresses):
+            result = self._extract_best(norm, self._addresses, threshold)
+            if result is not None:
+                return result
+        return None, 0, None
+
+    def _extract_best(
+        self, norm: str, candidates: list[str], threshold: int
+    ) -> tuple[str | None, int, str | None] | None:
         if not candidates:
             return None
         result = process.extractOne(
@@ -81,22 +110,17 @@ class ComplexAddressIndex:
         )
         if result is None:
             return None
-        return self._id_by_address.get(result[0])
+        matched_addr, score, _ = result
+        cid = self._id_by_address.get(matched_addr)
+        if not cid:
+            return None
+        return cid, int(score), matched_addr
 
-    def match(self, address: str, threshold: int = 85) -> str | None:
+    def register(self, complex_id: str, address: str) -> None:
+        """Add a complex to the index after inserting a new row."""
         norm = normalize_address(address)
-        if not norm:
-            return None
-        if norm in self._id_by_address:
-            return self._id_by_address[norm]
-        if not self._addresses:
-            return None
-
-        house_key = _house_number_key(norm)
-        candidates = self._by_house.get(house_key, [])
-        matched = self._fuzzy_match(norm, candidates, threshold)
-        if matched:
-            return matched
-        if candidates and len(candidates) < len(self._addresses):
-            return self._fuzzy_match(norm, self._addresses, threshold)
-        return None
+        if not norm or not complex_id or norm in self._id_by_address:
+            return
+        self._id_by_address[norm] = str(complex_id)
+        self._addresses.append(norm)
+        self._by_house[_house_number_key(norm)].append(norm)

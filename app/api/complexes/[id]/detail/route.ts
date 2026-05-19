@@ -40,7 +40,8 @@ export async function GET(
        stabilized_units, stabilization_year, landlord_id,
        has_bedbug_history, bedbug_last_reported_year, bedbug_report_count,
        has_active_construction, active_permit_count, oath_violation_count,
-       hp_action_count, hp_action_last_year, cached_community_score`
+       hp_action_count, hp_action_last_year, cached_community_score,
+       neighborhood, verified, source`
     )
     .eq("id", id)
     .maybeSingle();
@@ -59,9 +60,18 @@ export async function GET(
     .eq("complex_id", id)
     .not("rent", "is", null);
 
-  const allRents = (pricing ?? [])
-    .map((r) => r.rent)
-    .filter((r): r is number => r != null);
+  const { data: reviewRents } = await supabase
+    .from("reviews")
+    .select("rent_amount")
+    .eq("complex_id", id)
+    .not("rent_amount", "is", null);
+
+  const allRents = [
+    ...(pricing ?? []).map((r) => r.rent).filter((r): r is number => r != null),
+    ...(reviewRents ?? [])
+      .map((r) => r.rent_amount)
+      .filter((r): r is number => r != null),
+  ];
   const median_rent = median(allRents);
 
   const rentByBedroom: Record<string, number | null> = {};
@@ -124,7 +134,10 @@ export async function GET(
     name: complex.name,
     address: complex.address,
     borough: complex.borough,
+    neighborhood: complex.neighborhood ?? null,
     zip: complex.zip,
+    verified: complex.verified ?? true,
+    data_source: complex.source ?? null,
     units: complex.units,
     google_rating: complex.google_rating,
     google_review_count: complex.google_review_count,

@@ -24,6 +24,8 @@ import { MapMarkers } from "./MapMarkers";
 import { RentModal } from "./RentModal";
 import { ReviewModal } from "./ReviewModal";
 import { MapSearchBar } from "./MapSearchBar";
+import { CompareDrawer } from "@/components/compare/CompareDrawer";
+import { loadCompareList } from "@/lib/compare-buildings";
 
 function FlyToComplex({ complex }: { complex: Complex | null }) {
   const map = useMap();
@@ -75,8 +77,18 @@ export default function MapView() {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [rentOpen, setRentOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [compareCount, setCompareCount] = useState(0);
   const [reviewComplex, setReviewComplex] = useState<Complex | null>(null);
   const [rentComplex, setRentComplex] = useState<Complex | null>(null);
+
+  const refreshCompareCount = useCallback(() => {
+    setCompareCount(loadCompareList().length);
+  }, []);
+
+  useEffect(() => {
+    refreshCompareCount();
+  }, [refreshCompareCount]);
 
   const handleViewportChange = useCallback(
     (bounds: LatLngBounds, nextZoom: number) => {
@@ -226,6 +238,18 @@ export default function MapView() {
           </button>
           <button
             type="button"
+            onClick={() => setCompareOpen(true)}
+            className="flex h-11 shrink-0 items-center gap-1 rounded-xl border border-neutral-700 bg-neutral-900/95 px-3 text-xs text-neutral-300 shadow-lg backdrop-blur hover:border-orange-500/50"
+          >
+            Compare
+            {compareCount > 0 && (
+              <span className="rounded-full bg-orange-500 px-1.5 text-[10px] font-bold text-neutral-950">
+                {compareCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
             onClick={() => setAddOpen(true)}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-neutral-700 bg-neutral-900/95 text-xl text-orange-500 shadow-lg backdrop-blur hover:border-orange-500/50"
             aria-label="Add building"
@@ -262,6 +286,7 @@ export default function MapView() {
               onClose={handleClosePanel}
               onRateBuilding={openReview}
               onReportRent={openRent}
+              onCompareChange={refreshCompareCount}
             />
           </div>
         </>
@@ -301,6 +326,8 @@ export default function MapView() {
         }}
         onCreated={handleCreatedBuilding}
       />
+
+      <CompareDrawer open={compareOpen} onClose={() => setCompareOpen(false)} />
 
       {error && (
         <div className="absolute bottom-16 left-4 z-[1001] max-w-md rounded-lg border border-red-900/50 bg-red-950/90 px-4 py-3 text-sm text-red-200">

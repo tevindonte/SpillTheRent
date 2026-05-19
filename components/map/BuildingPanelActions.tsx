@@ -6,18 +6,24 @@ import { RapSheetCard } from "@/components/RapSheetCard";
 import type { BuildingDetail } from "@/lib/building-detail";
 import { getSiteUrl } from "@/lib/auth/site-url";
 import { shareRapSheetImage } from "@/lib/share-rap-sheet";
+import { WatchlistButton } from "./panel/WatchlistButton";
+import { addToCompare } from "@/lib/compare-buildings";
+import type { Complex } from "@/lib/complexes";
 
 type BuildingPanelActionsProps = {
-  complexId: string;
+  complex: Complex;
   detail: BuildingDetail | null;
   onToast: (message: string) => void;
+  onCompareChange?: () => void;
 };
 
 export function BuildingPanelActions({
-  complexId,
+  complex,
   detail,
   onToast,
+  onCompareChange,
 }: BuildingPanelActionsProps) {
+  const complexId = complex.id;
   const cardRef = useRef<HTMLDivElement>(null);
   const [sharing, setSharing] = useState(false);
 
@@ -62,6 +68,22 @@ export function BuildingPanelActions({
         >
           🔗 Copy Link
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            addToCompare({
+              id: complex.id,
+              name: complex.name,
+              address: complex.address,
+            });
+            onToast("Added to compare (max 3).");
+            onCompareChange?.();
+          }}
+          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:border-orange-500/50"
+        >
+          ⚖ Compare
+        </button>
+        <WatchlistButton complexId={complexId} onToast={onToast} />
       </div>
 
       {detail &&
