@@ -190,8 +190,32 @@ function rowToComplex(row: MapSummaryRow): Complex {
   };
 }
 
-const MAP_SUMMARY_COLUMNS =
+const MAP_SUMMARY_COLUMNS_FULL =
   "id, name, address, borough, neighborhood, zip, units, google_rating, google_review_count, street_view_url, lat, lng, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+
+/** Production DBs before 20260605000001_product_features.sql */
+const MAP_SUMMARY_COLUMNS_LEGACY =
+  "id, name, address, borough, neighborhood, zip, units, google_rating, google_review_count, street_view_url, lat, lng, median_rent, review_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+
+let mapSummarySelectColumns = MAP_SUMMARY_COLUMNS_FULL;
+
+function isMapSummarySchemaError(error: {
+  message?: string;
+  code?: string;
+  details?: string;
+  hint?: string;
+}): boolean {
+  const blob = `${error.code ?? ""} ${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`.toLowerCase();
+  return (
+    error.code === "42703" ||
+    error.code === "PGRST204" ||
+    (blob.includes("column") && blob.includes("does not exist")) ||
+    blob.includes("cached_median_rent") ||
+    blob.includes("cached_review_count") ||
+    blob.includes("cached_community_score") ||
+    blob.includes("cached_signal_count")
+  );
+}
 
 async function fetchMapSummaryPage(
   supabase: ReturnType<typeof createClient>,
@@ -203,11 +227,10 @@ async function fetchMapSummaryPage(
     west?: number;
     east?: number;
     filters?: MapFilters;
-  }
+  },
+  selectColumns: string
 ) {
-  let query = supabase
-    .from("complexes_map_summary")
-    .select(MAP_SUMMARY_COLUMNS);
+  let query = supabase.from("complexes_map_summary").select(selectColumns);
 
   if (options.south != null) query = query.gte("lat", options.south);
   if (options.north != null) query = query.lte("lat", options.north);
@@ -246,19 +269,34 @@ async function fetchFromMapSummary(
   let offset = 0;
 
   while (true) {
-    const { data, error } = await fetchMapSummaryPage(supabase, {
-      offset,
-      pageSize,
-      south: bounds?.south,
-      north: bounds?.north,
-      west: bounds?.west,
-      east: bounds?.east,
-      filters,
-    });
+    const { data, error } = await fetchMapSummaryPage(
+      supabase,
+      {
+        offset,
+        pageSize,
+        south: bounds?.south,
+        north: bounds?.north,
+        west: bounds?.west,
+        east: bounds?.east,
+        filters,
+      },
+      mapSummarySelectColumns
+    );
 
-    if (error) return { complexes: null, error };
+    if (error) {
+      if (
+        mapSummarySelectColumns === MAP_SUMMARY_COLUMNS_FULL &&
+        isMapSummarySchemaError(error)
+      ) {
+        mapSummarySelectColumns = MAP_SUMMARY_COLUMNS_LEGACY;
+        offset = 0;
+        complexes.length = 0;
+        continue;
+      }
+      return { complexes: null, error };
+    }
 
-    const batch = (data ?? []) as MapSummaryRow[];
+    const batch = (data ?? []) as unknown as MapSummaryRow[];
     if (!batch.length) break;
 
     complexes.push(...rowsToComplexes(batch));

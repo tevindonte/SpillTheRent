@@ -53,6 +53,19 @@ create policy data_source_freshness_public_read on public.data_source_freshness
   using (true);
 
 -- ---------------------------------------------------------------------------
+-- Prerequisites (safe if earlier migrations were skipped on production)
+-- ---------------------------------------------------------------------------
+alter table public.complexes
+  add column if not exists cached_median_rent numeric,
+  add column if not exists cached_review_count integer not null default 0,
+  add column if not exists cached_community_score numeric,
+  add column if not exists cached_signal_count integer not null default 0,
+  add column if not exists verified boolean not null default true;
+
+comment on column public.complexes.verified is
+  'false = user-submitted, pending verification; true = PLUTO or confirmed';
+
+-- ---------------------------------------------------------------------------
 -- Median rent: pricing_history + reviews.rent_amount
 -- ---------------------------------------------------------------------------
 create or replace function public.recalculate_complex_cache(p_complex_id uuid)
