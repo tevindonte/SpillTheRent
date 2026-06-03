@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { ensureProfile } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertSubmissionRateLimit } from "@/lib/rate-limit";
 
 function parseScore(value: unknown): number | null {
   if (value == null || value === "") return null;
@@ -48,6 +49,11 @@ export async function POST(request: NextRequest) {
 
   const admin = createAdminClient();
   await ensureProfile(admin, user.id, user.email);
+
+  const limited = await assertSubmissionRateLimit(admin, user.id, "micro_rating");
+  if (!limited.ok) {
+    return NextResponse.json({ error: limited.message }, { status: 429 });
+  }
 
   const { error } = await admin.from("building_micro_ratings").upsert(
     {

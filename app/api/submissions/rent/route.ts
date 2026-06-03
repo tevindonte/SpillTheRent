@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { ensureProfile } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertSubmissionRateLimit } from "@/lib/rate-limit";
 import {
   BEDROOM_OPTIONS,
   MOVE_IN_YEAR_START,
@@ -62,6 +63,11 @@ export async function POST(request: NextRequest) {
   if (user) {
     const profile = await ensureProfile(admin, user.id, user.email);
     userId = profile.id;
+
+    const limited = await assertSubmissionRateLimit(admin, userId, "rent");
+    if (!limited.ok) {
+      return NextResponse.json({ error: limited.message }, { status: 429 });
+    }
 
     await admin.from("rental_history").insert({
       user_id: userId,

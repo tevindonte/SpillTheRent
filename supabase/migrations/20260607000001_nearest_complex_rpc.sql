@@ -1,4 +1,7 @@
 -- Nearest building lookup for geo UGC prompt
+-- PostGIS lives in extensions schema on Supabase.
+
+create extension if not exists postgis with schema extensions;
 
 create or replace function public.complexes_nearest(
   p_lat double precision,
@@ -18,7 +21,7 @@ returns table (
 language sql
 stable
 security invoker
-set search_path = public
+set search_path = public, extensions
 as $$
   select
     c.id,
@@ -28,15 +31,15 @@ as $$
     c.neighborhood,
     st_y(c.coordinates::geometry) as lat,
     st_x(c.coordinates::geometry) as lng,
-    ST_Distance(
+    st_distance(
       c.coordinates,
-      ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography
+      st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography
     ) as distance_m
   from public.complexes c
   where c.coordinates is not null
-  order by ST_Distance(
+  order by st_distance(
     c.coordinates,
-    ST_SetSRID(ST_MakePoint(p_lng, p_lat), 4326)::geography
+    st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography
   )
   limit greatest(1, least(p_limit, 10));
 $$;

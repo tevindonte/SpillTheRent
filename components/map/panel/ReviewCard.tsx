@@ -52,8 +52,10 @@ export function ReviewCard({
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [loadingComments, setLoadingComments] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [flagMsg, setFlagMsg] = useState<string | null>(null);
 
   const isOwn = currentUserId && review.user_id === currentUserId;
+  const canFlag = review.source === "user" && !isOwn && user;
 
   async function vote(direction: "up" | "down") {
     if (isOwn) return;
@@ -198,7 +200,31 @@ export function ReviewCard({
         >
           {review.comment_count} comment{review.comment_count === 1 ? "" : "s"}
         </button>
+        {canFlag && (
+          <button
+            type="button"
+            onClick={async () => {
+              const res = await fetch(`/api/reviews/${review.id}/flag`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: "other", details: "Flagged from building panel" }),
+              });
+              const data = await res.json().catch(() => ({}));
+              setFlagMsg(
+                res.ok
+                  ? (data.message ?? "Flagged")
+                  : (data.error ?? "Could not flag")
+              );
+            }}
+            className="text-xs text-neutral-600 hover:text-red-400"
+          >
+            Flag
+          </button>
+        )}
       </div>
+      {flagMsg && (
+        <p className="mt-1 text-[10px] text-neutral-500">{flagMsg}</p>
+      )}
 
       {commentsOpen && (
         <div className="mt-3 border-t border-neutral-800 pt-3">

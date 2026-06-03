@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { ensureProfile } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { assertSubmissionRateLimit } from "@/lib/rate-limit";
 import {
   BEDROOM_OPTIONS,
   RED_FLAG_OPTIONS,
@@ -89,6 +90,10 @@ export async function POST(request: NextRequest) {
   if (user) {
     const profile = await ensureProfile(admin, user.id, user.email);
     userId = profile.id;
+    const limited = await assertSubmissionRateLimit(admin, userId, "review");
+    if (!limited.ok) {
+      return NextResponse.json({ error: limited.message }, { status: 429 });
+    }
   }
 
   const { error: reviewError } = await admin.from("reviews").insert({

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DhcrUploadForm } from "@/components/tools/DhcrUploadForm";
 import { getSiteOrigin } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -56,19 +57,15 @@ export default function RentHistoryToolPage() {
         </ol>
       </section>
 
-      <section className="mt-6 rounded-xl border border-orange-500/30 bg-orange-950/20 p-5">
-        <h2 className="text-sm font-semibold text-orange-300">Coming soon</h2>
-        <p className="mt-2 text-sm text-neutral-300">
-          Upload your DHCR PDF — we&apos;ll parse historical rents, populate building rent
-          history, and highlight possible overcharges. Targeting a one-time paid check (~$9.99)
-          per building during your lease search.
-        </p>
+      <section className="rounded-xl border border-orange-500/30 bg-orange-950/20 p-5">
+        <DhcrUploadForm />
         <p className="mt-3 text-xs text-neutral-500">
-          Want early access?{" "}
+          Paid automated overcharge analysis (~$9.99) coming after we validate parsing
+          accuracy. Questions?{" "}
           <Link href="/about" className="text-orange-400 hover:underline">
             Contact us
-          </Link>{" "}
-          from the about page.
+          </Link>
+          .
         </p>
       </section>
 
