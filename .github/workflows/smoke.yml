@@ -1,0 +1,35 @@
+# Post-deploy smoke checks (public routes). Runs on push to main and manually.
+
+name: Smoke test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Hit production endpoints
+        env:
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: |
+          BASE="${SITE_URL:-https://spillthe.rent}"
+          BASE="${BASE%/}"
+          check() {
+            local path="$1"
+            local code
+            code=$(curl -sS -o /tmp/smoke-body.txt -w "%{http_code}" "${BASE}${path}")
+            echo "${path} → HTTP ${code}"
+            head -c 200 /tmp/smoke-body.txt
+            echo ""
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then
+              echo "::error::${path} failed (${code})"
+              exit 1
+            fi
+          }
+          check "/"
+          check "/feed"
+          check "/api/data-freshness"

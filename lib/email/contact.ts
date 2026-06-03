@@ -1,4 +1,4 @@
-const ZEPTO_API = "https://api.zeptomail.com/v1.1/email";
+import { ZEPTO_API } from "@/lib/email/zeptomail";
 
 export type ContactPayload = {
   name: string;

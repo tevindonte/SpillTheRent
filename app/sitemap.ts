@@ -1,7 +1,14 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/seo";
 
-const STATIC_ROUTES = ["/", "/calculator", "/leaderboard", "/faq"] as const;
+const STATIC_ROUTES = [
+  "/",
+  "/calculator",
+  "/leaderboard",
+  "/faq",
+  "/feed",
+  "/tools/rent-history",
+] as const;
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();

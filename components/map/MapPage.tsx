@@ -56,6 +56,9 @@ export default function MapPage() {
             <a href="/leaderboard" className="hover:text-orange-400">
               Leaderboard
             </a>
+            <a href="/feed" className="hover:text-orange-400">
+              Activity
+            </a>
           </nav>
         </footer>
       </div>

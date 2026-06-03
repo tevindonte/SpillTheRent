@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "spillthe.rent — NYC Building Intel",
+  "version": "0.1.0",
+  "description": "See HPD violations and tenant reviews on StreetEasy listings before you tour.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://streeteasy.com/*",
+    "https://www.streeteasy.com/*",
+    "https://spillthe.rent/*"
+  ],
+  "action": {
+    "default_title": "spillthe.rent",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://streeteasy.com/*",
+        "https://www.streeteasy.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

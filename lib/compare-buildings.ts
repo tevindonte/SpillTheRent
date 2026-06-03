@@ -31,6 +31,16 @@ export function addToCompare(entry: CompareEntry): CompareEntry[] {
   return trimmed;
 }
 
+export function setCompareList(entries: CompareEntry[]): CompareEntry[] {
+  const trimmed = entries.slice(0, MAX_COMPARE);
+  saveCompareList(trimmed);
+  return trimmed;
+}
+
+export function compareIds(entries: CompareEntry[]): string[] {
+  return entries.map((e) => e.id);
+}
+
 export function removeFromCompare(id: string): CompareEntry[] {
   const list = loadCompareList().filter((e) => e.id !== id);
   saveCompareList(list);

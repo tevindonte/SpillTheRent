@@ -190,14 +190,18 @@ function rowToComplex(row: MapSummaryRow): Complex {
   };
 }
 
-const MAP_SUMMARY_COLUMNS_FULL =
-  "id, name, address, borough, neighborhood, zip, units, google_rating, google_review_count, street_view_url, lat, lng, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+/** Marker + filter fields only; panel loads full detail on click. */
+const MAP_SUMMARY_COLUMNS_SLIM =
+  "id, name, address, lat, lng, google_rating, median_rent, cached_median_rent, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+
+const MAP_SUMMARY_COLUMNS_SLIM_LEGACY =
+  "id, name, address, lat, lng, google_rating, median_rent, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
 
 /** Production DBs before 20260605000001_product_features.sql */
 const MAP_SUMMARY_COLUMNS_LEGACY =
   "id, name, address, borough, neighborhood, zip, units, google_rating, google_review_count, street_view_url, lat, lng, median_rent, review_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
 
-let mapSummarySelectColumns = MAP_SUMMARY_COLUMNS_FULL;
+let mapSummarySelectColumns = MAP_SUMMARY_COLUMNS_SLIM;
 
 function isMapSummarySchemaError(error: {
   message?: string;
@@ -284,14 +288,19 @@ async function fetchFromMapSummary(
     );
 
     if (error) {
-      if (
-        mapSummarySelectColumns === MAP_SUMMARY_COLUMNS_FULL &&
-        isMapSummarySchemaError(error)
-      ) {
-        mapSummarySelectColumns = MAP_SUMMARY_COLUMNS_LEGACY;
-        offset = 0;
-        complexes.length = 0;
-        continue;
+      if (isMapSummarySchemaError(error)) {
+        const nextColumns =
+          mapSummarySelectColumns === MAP_SUMMARY_COLUMNS_SLIM
+            ? MAP_SUMMARY_COLUMNS_SLIM_LEGACY
+            : mapSummarySelectColumns === MAP_SUMMARY_COLUMNS_SLIM_LEGACY
+              ? MAP_SUMMARY_COLUMNS_LEGACY
+              : null;
+        if (nextColumns) {
+          mapSummarySelectColumns = nextColumns;
+          offset = 0;
+          complexes.length = 0;
+          continue;
+        }
       }
       return { complexes: null, error };
     }

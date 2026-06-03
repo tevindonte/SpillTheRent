@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("complexes")
-    .select("id, name, address, borough, zip")
+    .select("id, name, address, borough, zip, hpd_open_violations, hpd_violation_score")
     .or(`name.ilike.${pattern},address.ilike.${pattern}`)
     .order("name")
     .limit(12);

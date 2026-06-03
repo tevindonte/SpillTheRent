@@ -25,7 +25,17 @@ import { RentModal } from "./RentModal";
 import { ReviewModal } from "./ReviewModal";
 import { MapSearchBar } from "./MapSearchBar";
 import { CompareDrawer } from "@/components/compare/CompareDrawer";
-import { loadCompareList } from "@/lib/compare-buildings";
+import {
+  compareIds,
+  loadCompareList,
+  setCompareList,
+  type CompareEntry,
+} from "@/lib/compare-buildings";
+import {
+  compareSearchString,
+  parseCompareParam,
+} from "@/lib/compare-url";
+import { GeoTeaPrompt } from "./GeoTeaPrompt";
 
 function FlyToComplex({ complex }: { complex: Complex | null }) {
   const map = useMap();
@@ -65,6 +75,7 @@ export default function MapView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const deepLinkHandled = useRef<string | null>(null);
+  const compareLinkHandled = useRef<string | null>(null);
   const [filters, setFilters] = useState<MapFilters>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [panelRefreshKey, setPanelRefreshKey] = useState(0);
@@ -82,13 +93,63 @@ export default function MapView() {
   const [reviewComplex, setReviewComplex] = useState<Complex | null>(null);
   const [rentComplex, setRentComplex] = useState<Complex | null>(null);
 
+  const syncCompareToUrl = useCallback(
+    (entries: CompareEntry[]) => {
+      const path = compareSearchString(
+        new URLSearchParams(searchParams.toString()),
+        compareIds(entries)
+      );
+      router.replace(path, { scroll: false });
+    },
+    [router, searchParams]
+  );
+
   const refreshCompareCount = useCallback(() => {
     setCompareCount(loadCompareList().length);
   }, []);
 
+  const handleCompareChange = useCallback(() => {
+    const list = loadCompareList();
+    refreshCompareCount();
+    syncCompareToUrl(list);
+  }, [refreshCompareCount, syncCompareToUrl]);
+
   useEffect(() => {
     refreshCompareCount();
   }, [refreshCompareCount]);
+
+  useEffect(() => {
+    const compareRaw = searchParams.get("compare");
+    if (!compareRaw) {
+      compareLinkHandled.current = null;
+      return;
+    }
+    if (compareLinkHandled.current === compareRaw) return;
+    compareLinkHandled.current = compareRaw;
+
+    const ids = parseCompareParam(compareRaw);
+    if (!ids.length) return;
+
+    setCompareOpen(true);
+    Promise.all(
+      ids.map(async (id) => {
+        const res = await fetch(`/api/complexes/${id}/detail`);
+        if (!res.ok) return null;
+        const d = await res.json();
+        return {
+          id: d.id as string,
+          name: d.name as string,
+          address: (d.address as string | null) ?? null,
+        } satisfies CompareEntry;
+      })
+    ).then((entries) => {
+      const valid = entries.filter(Boolean) as CompareEntry[];
+      if (valid.length) {
+        setCompareList(valid);
+        refreshCompareCount();
+      }
+    });
+  }, [searchParams, refreshCompareCount]);
 
   const handleViewportChange = useCallback(
     (bounds: LatLngBounds, nextZoom: number) => {
@@ -266,6 +327,11 @@ export default function MapView() {
         onChange={setFilters}
       />
 
+      <GeoTeaPrompt
+        panelOpen={panelOpen}
+        onSelectBuilding={handleSelectComplex}
+      />
+
       {loading && !panelOpen && (
         <div className="pointer-events-none absolute right-4 top-20 z-[1000] rounded-full border border-neutral-800 bg-neutral-950/90 px-3 py-1.5 text-xs text-neutral-400 backdrop-blur">
           Loading map…
@@ -286,7 +352,7 @@ export default function MapView() {
               onClose={handleClosePanel}
               onRateBuilding={openReview}
               onReportRent={openRent}
-              onCompareChange={refreshCompareCount}
+              onCompareChange={handleCompareChange}
             />
           </div>
         </>
@@ -327,7 +393,11 @@ export default function MapView() {
         onCreated={handleCreatedBuilding}
       />
 
-      <CompareDrawer open={compareOpen} onClose={() => setCompareOpen(false)} />
+      <CompareDrawer
+        open={compareOpen}
+        onClose={() => setCompareOpen(false)}
+        onListChange={handleCompareChange}
+      />
 
       {error && (
         <div className="absolute bottom-16 left-4 z-[1001] max-w-md rounded-lg border border-red-900/50 bg-red-950/90 px-4 py-3 text-sm text-red-200">

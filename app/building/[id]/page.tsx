@@ -24,6 +24,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${data.name} — NYC Building Reviews & Violations`;
   const description = `${data.address ?? data.name} in ${data.borough ?? "NYC"}. spillthe.rent score ${score}. HPD: ${data.hpd_violation_score ?? "see map"}. Violations, bedbugs, tenant reviews.`;
 
+  const ogImage = `${getSiteOrigin()}/api/og/building/${params.id}`;
+
   return {
     title,
     description,
@@ -33,8 +35,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: `${getSiteOrigin()}/building/${params.id}`,
       type: "website",
+      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
-    twitter: { card: "summary_large_image", title, description },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
   };
 }
 

@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  compareIds,
   loadCompareList,
   removeFromCompare,
   type CompareEntry,
 } from "@/lib/compare-buildings";
+import { compareShareUrl } from "@/lib/compare-url";
 import { formatRent } from "@/lib/format";
+import { getSiteUrl } from "@/lib/auth/site-url";
 
 type CompareDetail = {
   id: string;
@@ -22,9 +25,11 @@ type CompareDetail = {
 export function CompareDrawer({
   open,
   onClose,
+  onListChange,
 }: {
   open: boolean;
   onClose: () => void;
+  onListChange?: () => void;
 }) {
   const [entries, setEntries] = useState<CompareEntry[]>([]);
   const [details, setDetails] = useState<CompareDetail[]>([]);
@@ -75,13 +80,31 @@ export function CompareDrawer({
       <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl border border-neutral-800 bg-[#111] p-4 shadow-xl">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-lg font-semibold text-neutral-100">Compare buildings</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-sm text-neutral-500 hover:text-neutral-300"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            {entries.length > 0 && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const url = compareShareUrl(getSiteUrl(), compareIds(entries));
+                  try {
+                    await navigator.clipboard.writeText(url);
+                  } catch {
+                    window.prompt("Copy compare link:", url);
+                  }
+                }}
+                className="text-xs text-orange-400 hover:underline"
+              >
+                Copy share link
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-sm text-neutral-500 hover:text-neutral-300"
+            >
+              Close
+            </button>
+          </div>
         </div>
         {entries.length === 0 ? (
           <p className="mt-4 text-sm text-neutral-500">
@@ -122,6 +145,7 @@ export function CompareDrawer({
                     onClick={() => {
                       removeFromCompare(d.id);
                       refresh();
+                      onListChange?.();
                     }}
                     className="text-xs text-neutral-600 hover:text-red-400"
                   >

@@ -16,8 +16,10 @@ import { BuildingRecordSection } from "./panel/BuildingRecordSection";
 import { ReviewCard } from "./panel/ReviewCard";
 import { BuildingPanelActions } from "./BuildingPanelActions";
 import { ShouldISignSummary } from "./panel/ShouldISignSummary";
+import { RapSheetShareRow } from "./panel/RapSheetShareRow";
 import { RentRealityBlock } from "./panel/RentRealityBlock";
 import { DataProvenance } from "./panel/DataProvenance";
+import { MicroRatingBlock } from "./panel/MicroRatingBlock";
 import { useToast } from "@/hooks/useToast";
 
 type SortOption =
@@ -257,12 +259,17 @@ export function BuildingPanel({
 
         <BuildingPanelActions
           complex={complex}
-          detail={detail}
           onToast={showToast}
           onCompareChange={onCompareChange}
         />
 
         {detail && !loading && <ShouldISignSummary detail={detail} />}
+
+        {detail && !loading && (
+          <RapSheetShareRow detail={detail} onToast={showToast} />
+        )}
+
+        <MicroRatingBlock complexId={complex.id} onToast={showToast} />
 
         {detail?.verified === false && (
           <p className="mt-2 text-[10px] text-amber-600/90">
