@@ -64,7 +64,7 @@ Register `spillthe.rent` in Google Search Console if you want "official" site ve
 
 | Asset | Size | Tip |
 |-------|------|-----|
-| **Store icon** | 128×128 PNG | Orange "S" or map pin on dark background; no tiny text |
+| **Store icon** | 128×128 PNG | `extension/store-icon-128x128.png` (also `store-icon-125x125.png`) |
 | **Screenshot** (required) | 1280×800 or 640×400 | Use `extension/chrome-store-screenshot-1280x800.png` (or capture a real listing) |
 | Small promo tile | 440×280 | Optional |
 | Marquee | 1400×560 | Optional |
