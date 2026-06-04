@@ -8,11 +8,14 @@ import { BOUNDS_DEBOUNCE_MS } from "@/lib/map-bounds";
 type DebouncedBoundsTrackerProps = {
   onViewportChange: (bounds: LatLngBounds, zoom: number) => void;
   debounceMs?: number;
+  /** Bump to re-read bounds immediately (e.g. after fly-to). */
+  refreshKey?: number;
 };
 
 export function DebouncedBoundsTracker({
   onViewportChange,
   debounceMs = BOUNDS_DEBOUNCE_MS,
+  refreshKey = 0,
 }: DebouncedBoundsTrackerProps) {
   const map = useMap();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,6 +47,12 @@ export function DebouncedBoundsTracker({
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [map, emit]);
+
+  useEffect(() => {
+    if (refreshKey < 1) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    emit();
+  }, [refreshKey, emit]);
 
   return null;
 }

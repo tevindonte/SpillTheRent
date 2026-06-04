@@ -1,5 +1,4 @@
--- Mapbox Vector Tiles for complexes (id, score, hpd, median_rent only).
--- Used by GET /api/complexes/mvt/{z}/{x}/{y}
+-- MVT tiles were empty: coordinates are WGS84 (4326) but st_tileenvelope is Web Mercator (3857).
 
 create or replace function public.complexes_mvt_tile(
   z integer,
@@ -65,18 +64,5 @@ as $$
     ''::bytea
   );
 $$;
-
-grant execute on function public.log_building_event(uuid, text, text, text, jsonb)
-  to service_role;
-
-grant execute on function public.complexes_mvt_tile(
-  integer,
-  integer,
-  integer,
-  text,
-  boolean,
-  boolean,
-  double precision
-) to anon, authenticated, service_role;
 
 notify pgrst, 'reload schema';

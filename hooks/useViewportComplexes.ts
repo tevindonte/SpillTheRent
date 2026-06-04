@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { LatLngBounds } from "leaflet";
 import { fetchComplexesInBounds, type Complex, type MapFilters } from "@/lib/complexes";
 import { fetchComplexesBoundsApi } from "@/lib/fetch-complexes-bounds-api";
+import { probeMvtAvailable, resetMvtProbeCache } from "@/lib/mvt-probe";
 import {
   expandBounds,
   getTileKeys,
@@ -38,12 +39,21 @@ export function useViewportComplexes(filters: MapFilters = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(13);
+  const [mvtAvailable, setMvtAvailable] = useState<boolean | null>(null);
+  const mvtAvailableRef = useRef<boolean | null>(null);
+  mvtAvailableRef.current = mvtAvailable;
 
   const clearCache = useCallback(() => {
     cacheRef.current.clear();
     fetchedTilesRef.current.clear();
     pendingTilesRef.current.clear();
   }, []);
+
+  useEffect(() => {
+    resetMvtProbeCache();
+    setMvtAvailable(null);
+    void probeMvtAvailable(filters).then(setMvtAvailable);
+  }, [filtersKey(filters)]);
 
   useEffect(() => {
     clearCache();
@@ -53,7 +63,7 @@ export function useViewportComplexes(filters: MapFilters = {}) {
       void loadForBounds(bounds, z);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtersKey(filters)]);
+  }, [filtersKey(filters), mvtAvailable]);
 
   const syncDisplayList = useCallback((viewport: MapBounds) => {
     const list: Complex[] = [];
@@ -73,11 +83,38 @@ export function useViewportComplexes(filters: MapFilters = {}) {
 
       const viewport = latLngBoundsToMapBounds(bounds);
 
-      // Zoomed out: MVT layer draws buildings; avoid loading thousands of markers.
+      // Zoomed out: MVT draws buildings when tiles work; otherwise one GeoJSON bounds load.
       if (nextZoom < MARKER_ZOOM_THRESHOLD) {
-        setComplexes([]);
-        setLoading(false);
+        const useMvt = mvtAvailableRef.current !== false;
+        if (useMvt) {
+          setComplexes([]);
+          setLoading(mvtAvailableRef.current === null);
+          setError(null);
+          return;
+        }
+
+        setLoading(true);
         setError(null);
+        try {
+          const batch = await fetchComplexesBoundsApi(
+            expandBounds(viewport),
+            filtersRef.current
+          );
+          if (requestIdRef.current === requestId) {
+            setComplexes(batch);
+          }
+        } catch (e) {
+          if (requestIdRef.current === requestId) {
+            setError(
+              e instanceof Error ? e.message : "Failed to load buildings"
+            );
+            setComplexes([]);
+          }
+        } finally {
+          if (requestIdRef.current === requestId) {
+            setLoading(false);
+          }
+        }
         return;
       }
 
@@ -170,6 +207,7 @@ export function useViewportComplexes(filters: MapFilters = {}) {
     loading,
     error,
     zoom,
+    mvtAvailable,
     loadForBounds,
     clearCache,
     noteBoundsDebounced,
