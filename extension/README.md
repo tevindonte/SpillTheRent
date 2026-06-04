@@ -16,4 +16,4 @@ Click the extension icon → set API base (default `https://spillthe.rent`, or `
 ## Notes
 
 - v0.3 uses `/api/extension/match` address/title match against Supabase.
-- Chrome Web Store publish is a separate step (privacy policy, review).
+- Chrome Web Store: see [CHROME_WEB_STORE.md](./CHROME_WEB_STORE.md) ($5 one-time developer fee).

@@ -1,0 +1,43 @@
+# Weekly refresh of HPD violations + bedbug filings (free NYC Open Data only).
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL              — https://YOUR_REF.supabase.co
+#   SUPABASE_SERVICE_ROLE_KEY — service role key (pipeline only)
+#
+# Manual run: Actions → NYC data ingest → Run workflow
+
+name: NYC data ingest
+
+on:
+  schedule:
+    # Sunday 06:00 UTC
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pipeline dependencies
+        working-directory: pipeline
+        run: pip install -r requirements.txt
+
+      - name: Run HPD + bedbugs ingest
+        working-directory: pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repo secrets"
+            exit 1
+          fi
+          python run_all.py --only hpd,bedbugs

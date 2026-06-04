@@ -5,8 +5,15 @@ import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import { formatRent } from "@/lib/format";
 
+type DhcrBedroomRent = {
+  bedrooms: number | null;
+  label: string;
+  amount: number;
+};
+
 type DhcrParsed = {
   rent_lines: { amount: number; context: string }[];
+  bedroom_rents: DhcrBedroomRent[];
   suggested_legal_rent: number | null;
   max_rent_in_doc: number | null;
   overcharge_hint: boolean;
@@ -66,20 +73,23 @@ export function DhcrUploadForm() {
     );
   }
 
+  const labeledBedrooms = parsed?.bedroom_rents?.filter((r) => r.bedrooms != null) ?? [];
+
   return (
     <form onSubmit={(e) => void submit(e)} className="mt-6 space-y-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-orange-400">
         Upload DHCR rent history (beta)
       </h2>
       <p className="text-xs text-neutral-500">
-        We extract rent amounts from your PDF automatically. Optional building ID
-        from the map URL (<code className="text-neutral-400">?building=uuid</code>).
+        We extract legal rent by bedroom when the PDF mentions BR/studio. Link a
+        building ID from the map (<code className="text-neutral-400">?building=uuid</code>)
+        to save rents on that building.
       </p>
       <input
         type="text"
         value={complexId}
         onChange={(e) => setComplexId(e.target.value)}
-        placeholder="Building ID (optional)"
+        placeholder="Building ID (recommended)"
         className="w-full rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-200"
       />
       <input
@@ -107,12 +117,24 @@ export function DhcrUploadForm() {
         <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-950/80 p-4 text-sm">
           {parsed.overcharge_hint && (
             <p className="mb-2 font-medium text-amber-300">
-              Possible overcharge pattern detected — verify with DHCR or a tenant attorney.
+              Possible overcharge pattern — verify with DHCR or a tenant attorney.
             </p>
+          )}
+          {labeledBedrooms.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-neutral-400">By bedroom</p>
+              <ul className="mt-1 space-y-1">
+                {labeledBedrooms.map((row) => (
+                  <li key={`${row.label}-${row.amount}`} className="text-neutral-300">
+                    <strong>{row.label}</strong>: {formatRent(row.amount)}/mo
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           {parsed.suggested_legal_rent != null && (
             <p className="text-neutral-300">
-              Mid-range rent in document:{" "}
+              Document mid-range:{" "}
               <strong>{formatRent(parsed.suggested_legal_rent)}/mo</strong>
               {parsed.max_rent_in_doc != null &&
                 parsed.max_rent_in_doc !== parsed.suggested_legal_rent && (
@@ -123,7 +145,7 @@ export function DhcrUploadForm() {
                 )}
             </p>
           )}
-          {parsed.rent_lines.length > 0 && (
+          {parsed.rent_lines.length > 0 && labeledBedrooms.length === 0 && (
             <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-neutral-500">
               {parsed.rent_lines.slice(0, 12).map((line) => (
                 <li key={line.amount}>

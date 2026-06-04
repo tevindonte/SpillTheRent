@@ -5,6 +5,9 @@ Usage (from repo root):
   cd pipeline && pip install -r requirements.txt && python run_all.py
   python run_all.py --only hpd,bedbugs
   python run_all.py --dry-run
+  python run_all.py --with-google   # includes paid Google enrichment (avoid by default)
+
+Default steps use free NYC Open Data only (no Google Places / Street View charges).
 """
 
 from __future__ import annotations
@@ -19,7 +22,8 @@ from dotenv import load_dotenv
 load_dotenv()
 load_dotenv("../.env.local")
 
-STEPS: list[tuple[str, str]] = [
+# Free NYC open-data ingest (recommended for scheduled runs)
+FREE_STEPS: list[tuple[str, str]] = [
     ("pluto", "ingest_pluto"),
     ("hpd", "ingest_hpd"),
     ("bedbugs", "ingest_bedbugs"),
@@ -28,6 +32,10 @@ STEPS: list[tuple[str, str]] = [
     ("oath", "ingest_oath"),
     ("dob", "ingest_dob_permits"),
     ("landlords", "ingest_landlords"),
+]
+
+# Paid Google APIs — run manually only when you accept billing
+GOOGLE_STEPS: list[tuple[str, str]] = [
     ("street_view", "enrich_street_view"),
     ("google_places", "enrich_google_places"),
 ]
@@ -50,11 +58,17 @@ def main() -> None:
         action="store_true",
         help="List steps only, do not execute",
     )
+    parser.add_argument(
+        "--with-google",
+        action="store_true",
+        help="Also run street_view + google_places (paid Google APIs)",
+    )
     args = parser.parse_args()
 
     only = {s.strip() for s in args.only.split(",")} if args.only else None
+    steps = FREE_STEPS + (GOOGLE_STEPS if args.with_google else [])
 
-    for name, module in STEPS:
+    for name, module in steps:
         if only and name not in only:
             continue
         print(f"\n=== {name} ({module}) ===", flush=True)
@@ -70,6 +84,13 @@ def main() -> None:
         except Exception as e:
             print(f"  failed: {name}: {e}", file=sys.stderr)
             raise
+
+    if not args.with_google and not args.dry_run:
+        print(
+            "\nSkipped paid Google steps (street_view, google_places). "
+            "Pass --with-google to include them.",
+            flush=True,
+        )
 
     print("\nAll requested pipelines finished.", flush=True)
 

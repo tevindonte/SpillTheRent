@@ -21,6 +21,8 @@ import { BottomStatusBar } from "./BottomStatusBar";
 import { DebouncedBoundsTracker } from "./DebouncedBoundsTracker";
 import { MapFilterPanel } from "./MapFilterPanel";
 import { MapMarkers } from "./MapMarkers";
+import { MapMvtLayer } from "./MapMvtLayer";
+import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
 import { RentModal } from "./RentModal";
 import { ReviewModal } from "./ReviewModal";
 import { MapSearchBar } from "./MapSearchBar";
@@ -168,6 +170,18 @@ export default function MapView() {
     [router]
   );
 
+  const handleMvtBuildingId = useCallback(
+    (id: string) => {
+      fetch(`/api/complexes/${id}/detail`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) handleSelectComplex(detailToComplex(data));
+        })
+        .catch(() => {});
+    },
+    [handleSelectComplex]
+  );
+
   const handleClosePanel = useCallback(() => {
     setSelectedComplex(null);
     router.replace("/", { scroll: false });
@@ -268,12 +282,19 @@ export default function MapView() {
         <DebouncedBoundsTracker onViewportChange={handleViewportChange} />
         <BoroughFlyTo boroughArea={filters.boroughArea} />
         <FlyToComplex complex={selectedComplex} />
-        <MapMarkers
-          complexes={complexes}
+        <MapMvtLayer
+          filters={filters}
           zoom={zoom}
-          selectedId={selectedComplex?.id ?? null}
-          onSelect={handleSelectComplex}
+          onBuildingId={handleMvtBuildingId}
         />
+        {zoom >= MARKER_ZOOM_THRESHOLD && (
+          <MapMarkers
+            complexes={complexes}
+            zoom={zoom}
+            selectedId={selectedComplex?.id ?? null}
+            onSelect={handleSelectComplex}
+          />
+        )}
       </MapContainer>
 
       <div className="pointer-events-none absolute inset-0 z-[1000] flex flex-col p-4 pb-16">

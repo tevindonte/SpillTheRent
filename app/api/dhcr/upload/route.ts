@@ -99,13 +99,34 @@ export async function POST(request: NextRequest) {
   const linkedComplexId =
     typeof complexId === "string" && complexId.length > 0 ? complexId : null;
 
-  if (linkedComplexId && parsed?.suggested_legal_rent) {
-    await admin.from("pricing_history").insert({
-      complex_id: linkedComplexId,
-      rent: Math.round(parsed.suggested_legal_rent),
-      user_id: user.id,
-      is_anonymous: true,
-    });
+  if (linkedComplexId && parsed) {
+    const withBedroom = (parsed.bedroom_rents ?? []).filter(
+      (r) => r.bedrooms != null
+    );
+    const byBedroom = new Map<number, number>();
+    for (const row of withBedroom) {
+      if (row.bedrooms == null || byBedroom.has(row.bedrooms)) continue;
+      byBedroom.set(row.bedrooms, Math.round(row.amount));
+    }
+
+    if (byBedroom.size > 0) {
+      await admin.from("pricing_history").insert(
+        Array.from(byBedroom.entries()).map(([bedrooms, rent]) => ({
+          complex_id: linkedComplexId,
+          rent,
+          bedrooms,
+          user_id: user.id,
+          is_anonymous: true,
+        }))
+      );
+    } else if (parsed.suggested_legal_rent) {
+      await admin.from("pricing_history").insert({
+        complex_id: linkedComplexId,
+        rent: Math.round(parsed.suggested_legal_rent),
+        user_id: user.id,
+        is_anonymous: true,
+      });
+    }
   }
 
   if (linkedComplexId) {
@@ -115,12 +136,17 @@ export async function POST(request: NextRequest) {
       .eq("id", linkedComplexId)
       .maybeSingle();
 
+    const bedroomSummary =
+      parsed?.bedroom_rents?.filter((r) => r.bedrooms != null).length ?? 0;
+
     await admin.rpc("log_building_event", {
       p_complex_id: linkedComplexId,
       p_event_type: "rent_report",
       p_title: `${(complexRow?.name as string) ?? "Building"}: DHCR rent history`,
       p_summary: parsed?.suggested_legal_rent
-        ? `Extracted ~$${Math.round(parsed.suggested_legal_rent)}/mo from DHCR PDF`
+        ? bedroomSummary > 0
+          ? `DHCR extract: ${bedroomSummary} bedroom line(s), ~$${Math.round(parsed.suggested_legal_rent)}/mo mid`
+          : `Extracted ~$${Math.round(parsed.suggested_legal_rent)}/mo from DHCR PDF`
         : "DHCR PDF uploaded",
       p_payload: {
         submission_id: submissionId,
