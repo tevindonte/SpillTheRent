@@ -11,7 +11,10 @@ import {
   MANHATTAN_CENTER,
   MAP_TILE_ATTRIBUTION,
   MAP_TILE_URL,
+  NYC_MAP_BOUNDS,
 } from "@/lib/map";
+import { viewportOverlapsNyc } from "@/lib/nyc-service-area";
+import { latLngBoundsToMapBounds } from "@/lib/map-bounds";
 import { BoroughFlyTo } from "./BoroughFlyTo";
 import { useViewportComplexes } from "@/hooks/useViewportComplexes";
 import { useViewportStats } from "@/hooks/useViewportStats";
@@ -21,8 +24,6 @@ import { BottomStatusBar } from "./BottomStatusBar";
 import { DebouncedBoundsTracker } from "./DebouncedBoundsTracker";
 import { MapFilterPanel } from "./MapFilterPanel";
 import { MapMarkers } from "./MapMarkers";
-import { MapMvtLayer } from "./MapMvtLayer";
-import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
 import { RentModal } from "./RentModal";
 import { ReviewModal } from "./ReviewModal";
 import { MapSearchBar } from "./MapSearchBar";
@@ -49,6 +50,15 @@ function FlyToComplex({ complex }: { complex: Complex | null }) {
     });
   }, [complex, map]);
 
+  return null;
+}
+
+function FlyToNyc({ flyKey }: { flyKey: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (flyKey < 1) return;
+    map.flyTo(DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, { duration: 0.55 });
+  }, [flyKey, map]);
   return null;
 }
 
@@ -92,6 +102,7 @@ export default function MapView() {
   const [addOpen, setAddOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareCount, setCompareCount] = useState(0);
+  const [outsideNyc, setOutsideNyc] = useState(false);
   const [reviewComplex, setReviewComplex] = useState<Complex | null>(null);
   const [rentComplex, setRentComplex] = useState<Complex | null>(null);
 
@@ -155,6 +166,7 @@ export default function MapView() {
 
   const handleViewportChange = useCallback(
     (bounds: LatLngBounds, nextZoom: number) => {
+      setOutsideNyc(!viewportOverlapsNyc(latLngBoundsToMapBounds(bounds)));
       noteBoundsDebounced();
       loadForBounds(bounds, nextZoom);
       fetchStats(bounds);
@@ -162,24 +174,14 @@ export default function MapView() {
     [loadForBounds, fetchStats, noteBoundsDebounced]
   );
 
+  const [flyNycKey, setFlyNycKey] = useState(0);
+
   const handleSelectComplex = useCallback(
     (complex: Complex) => {
       setSelectedComplex(complex);
       router.replace(`/?building=${complex.id}`, { scroll: false });
     },
     [router]
-  );
-
-  const handleMvtBuildingId = useCallback(
-    (id: string) => {
-      fetch(`/api/complexes/${id}/detail`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) handleSelectComplex(detailToComplex(data));
-        })
-        .catch(() => {});
-    },
-    [handleSelectComplex]
   );
 
   const handleClosePanel = useCallback(() => {
@@ -276,25 +278,21 @@ export default function MapView() {
         className="h-full w-full z-0"
         preferCanvas
         zoomControl={false}
+        maxBounds={NYC_MAP_BOUNDS}
+        maxBoundsViscosity={0.9}
       >
         <ZoomControl position="bottomleft" />
         <TileLayer url={MAP_TILE_URL} attribution={MAP_TILE_ATTRIBUTION} />
         <DebouncedBoundsTracker onViewportChange={handleViewportChange} />
         <BoroughFlyTo boroughArea={filters.boroughArea} />
+        <FlyToNyc flyKey={flyNycKey} />
         <FlyToComplex complex={selectedComplex} />
-        <MapMvtLayer
-          filters={filters}
+        <MapMarkers
+          complexes={complexes}
           zoom={zoom}
-          onBuildingId={handleMvtBuildingId}
+          selectedId={selectedComplex?.id ?? null}
+          onSelect={handleSelectComplex}
         />
-        {zoom >= MARKER_ZOOM_THRESHOLD && (
-          <MapMarkers
-            complexes={complexes}
-            zoom={zoom}
-            selectedId={selectedComplex?.id ?? null}
-            onSelect={handleSelectComplex}
-          />
-        )}
       </MapContainer>
 
       <div className="pointer-events-none absolute inset-0 z-[1000] flex flex-col p-4 pb-16">
@@ -353,7 +351,23 @@ export default function MapView() {
         onSelectBuilding={handleSelectComplex}
       />
 
-      {loading && !panelOpen && (
+      {outsideNyc && !panelOpen && (
+        <div className="pointer-events-auto absolute left-4 right-4 top-20 z-[1000] mx-auto max-w-md rounded-xl border border-orange-500/40 bg-neutral-950/95 p-4 text-center shadow-xl backdrop-blur">
+          <p className="text-sm text-neutral-200">
+            spillthe.rent only covers <strong>Manhattan, Brooklyn &amp; LIC</strong>.
+            Pan back to NYC to see buildings.
+          </p>
+          <button
+            type="button"
+            onClick={() => setFlyNycKey((k) => k + 1)}
+            className="mt-3 rounded-lg bg-orange-500 px-4 py-2 text-xs font-semibold text-neutral-950 hover:bg-orange-400"
+          >
+            Go to NYC map
+          </button>
+        </div>
+      )}
+
+      {loading && !panelOpen && !outsideNyc && (
         <div className="pointer-events-none absolute right-4 top-20 z-[1000] rounded-full border border-neutral-800 bg-neutral-950/90 px-3 py-1.5 text-xs text-neutral-400 backdrop-blur">
           Loading map…
         </div>

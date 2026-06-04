@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isInNycServiceArea } from "@/lib/nyc-service-area";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(request: NextRequest) {
@@ -12,11 +13,8 @@ export async function GET(request: NextRequest) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return NextResponse.json({ error: "lat and lng are required" }, { status: 400 });
   }
-  if (lat < 40.4 || lat > 41.0 || lng < -74.3 || lng > -73.6) {
-    return NextResponse.json(
-      { error: "Location outside NYC service area" },
-      { status: 400 }
-    );
+  if (!isInNycServiceArea(lat, lng)) {
+    return NextResponse.json({ buildings: [] });
   }
 
   const supabase = createAdminClient();

@@ -7,6 +7,7 @@ import {
   isGeoTeaPromptSuppressed,
 } from "@/lib/geo-tea-prompt";
 import type { Complex } from "@/lib/complexes";
+import { isInNycServiceArea } from "@/lib/nyc-service-area";
 
 type NearbyBuilding = {
   id: string;
@@ -36,9 +37,15 @@ export function GeoTeaPrompt({ panelOpen, onSelectBuilding }: GeoTeaPromptProps)
     setLoading(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        if (!isInNycServiceArea(latitude, longitude)) {
+          setLoading(false);
+          setVisible(false);
+          return;
+        }
         try {
           const res = await fetch(
-            `/api/complexes/nearby?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}&limit=1`
+            `/api/complexes/nearby?lat=${latitude}&lng=${longitude}&limit=1`
           );
           const data = await res.json();
           if (!res.ok || !data.buildings?.length) {
