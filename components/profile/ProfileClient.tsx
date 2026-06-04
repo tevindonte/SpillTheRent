@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/profile";
@@ -36,12 +37,22 @@ export function ProfileClient({
   userId: string;
   email: string;
 }) {
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("overview");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [rentals, setRentals] = useState<RentalRow[]>([]);
   const [newHandle, setNewHandle] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const shield = searchParams.get("lease_shield");
+    if (shield === "success") {
+      setMessage("Lease Shield activated — unlimited watchlist and alerts for 90 days.");
+    } else if (shield === "cancel") {
+      setMessage("Checkout canceled. You can upgrade anytime from this page.");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const supabase = createClient();
