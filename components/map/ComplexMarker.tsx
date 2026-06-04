@@ -6,7 +6,7 @@ import type { Renderer } from "leaflet";
 import type { Complex } from "@/lib/complexes";
 import { ratingColor } from "@/lib/complexes";
 import { formatRent } from "@/lib/format";
-import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
+import { hasValidMapCoordinates, MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
 import { attachComplexToLayer, mapScore } from "@/lib/map-marker-style";
 import { createRentPillIcon } from "@/lib/map-markers";
 
@@ -25,6 +25,8 @@ export function ComplexMarker({
   onSelect,
   renderer,
 }: ComplexMarkerProps) {
+  if (!hasValidMapCoordinates(complex)) return null;
+
   const showDetail = zoom >= MARKER_ZOOM_THRESHOLD;
   const medianRent = complex.cached_median_rent ?? complex.median_rent;
   const rentLabel = showDetail ? formatRent(medianRent) : null;

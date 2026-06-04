@@ -12,13 +12,6 @@ import {
   MAP_TILE_ATTRIBUTION,
   MAP_TILE_URL,
 } from "@/lib/map";
-import {
-  dismissVisitorCoverageNotice,
-  isVisitorCoverageNoticeDismissed,
-} from "@/lib/coverage-notice";
-import { viewportOverlapsNyc } from "@/lib/nyc-service-area";
-import { useUserOutsideNyc } from "@/hooks/useUserOutsideNyc";
-import { latLngBoundsToMapBounds } from "@/lib/map-bounds";
 import { BoroughFlyTo } from "./BoroughFlyTo";
 import { useViewportComplexes } from "@/hooks/useViewportComplexes";
 import { useViewportStats } from "@/hooks/useViewportStats";
@@ -43,9 +36,6 @@ import {
   parseCompareParam,
 } from "@/lib/compare-url";
 import { GeoTeaPrompt } from "./GeoTeaPrompt";
-import { MapMvtLayer } from "./MapMvtLayer";
-import { NycCoverageNotice } from "./NycCoverageNotice";
-import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
 
 function FlyToComplex({ complex }: { complex: Complex | null }) {
   const map = useMap();
@@ -57,22 +47,6 @@ function FlyToComplex({ complex }: { complex: Complex | null }) {
     });
   }, [complex, map]);
 
-  return null;
-}
-
-function FlyToNyc({
-  flyKey,
-  onArrived,
-}: {
-  flyKey: number;
-  onArrived?: () => void;
-}) {
-  const map = useMap();
-  useEffect(() => {
-    if (flyKey < 1) return;
-    map.once("moveend", () => onArrived?.());
-    map.flyTo(DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, { duration: 0.55 });
-  }, [flyKey, map, onArrived]);
   return null;
 }
 
@@ -106,15 +80,8 @@ export default function MapView() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [panelRefreshKey, setPanelRefreshKey] = useState(0);
 
-  const {
-    complexes,
-    loading,
-    error,
-    zoom,
-    mvtAvailable,
-    loadForBounds,
-    noteBoundsDebounced,
-  } = useViewportComplexes(filters);
+  const { complexes, loading, error, zoom, loadForBounds, noteBoundsDebounced } =
+    useViewportComplexes(filters);
   const { medianRent, fetchStats } = useViewportStats(filters);
 
   const [selectedComplex, setSelectedComplex] = useState<Complex | null>(null);
@@ -123,9 +90,6 @@ export default function MapView() {
   const [addOpen, setAddOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareCount, setCompareCount] = useState(0);
-  const [viewportOutsideNyc, setViewportOutsideNyc] = useState(false);
-  const [visitorNoticeDismissed, setVisitorNoticeDismissed] = useState(true);
-  const userOutsideNyc = useUserOutsideNyc();
   const [reviewComplex, setReviewComplex] = useState<Complex | null>(null);
   const [rentComplex, setRentComplex] = useState<Complex | null>(null);
 
@@ -189,7 +153,6 @@ export default function MapView() {
 
   const handleViewportChange = useCallback(
     (bounds: LatLngBounds, nextZoom: number) => {
-      setViewportOutsideNyc(!viewportOverlapsNyc(latLngBoundsToMapBounds(bounds)));
       noteBoundsDebounced();
       loadForBounds(bounds, nextZoom);
       fetchStats(bounds);
@@ -197,31 +160,12 @@ export default function MapView() {
     [loadForBounds, fetchStats, noteBoundsDebounced]
   );
 
-  const [flyNycKey, setFlyNycKey] = useState(0);
-  const [boundsRefreshKey, setBoundsRefreshKey] = useState(0);
-
-  useEffect(() => {
-    setVisitorNoticeDismissed(isVisitorCoverageNoticeDismissed());
-  }, []);
-
   const handleSelectComplex = useCallback(
     (complex: Complex) => {
       setSelectedComplex(complex);
       router.replace(`/?building=${complex.id}`, { scroll: false });
     },
     [router]
-  );
-
-  const handleMvtBuildingId = useCallback(
-    (id: string) => {
-      fetch(`/api/complexes/${id}/detail`)
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data) handleSelectComplex(detailToComplex(data));
-        })
-        .catch(() => {});
-    },
-    [handleSelectComplex]
   );
 
   const handleClosePanel = useCallback(() => {
@@ -321,31 +265,15 @@ export default function MapView() {
       >
         <ZoomControl position="bottomleft" />
         <TileLayer url={MAP_TILE_URL} attribution={MAP_TILE_ATTRIBUTION} />
-        <DebouncedBoundsTracker
-          onViewportChange={handleViewportChange}
-          refreshKey={boundsRefreshKey}
-        />
+        <DebouncedBoundsTracker onViewportChange={handleViewportChange} />
         <BoroughFlyTo boroughArea={filters.boroughArea} />
-        <FlyToNyc
-          flyKey={flyNycKey}
-          onArrived={() => setBoundsRefreshKey((k) => k + 1)}
-        />
         <FlyToComplex complex={selectedComplex} />
-        {mvtAvailable !== false && (
-          <MapMvtLayer
-            filters={filters}
-            zoom={zoom}
-            onBuildingId={handleMvtBuildingId}
-          />
-        )}
-        {(zoom >= MARKER_ZOOM_THRESHOLD || mvtAvailable === false) && (
-          <MapMarkers
-            complexes={complexes}
-            zoom={zoom}
-            selectedId={selectedComplex?.id ?? null}
-            onSelect={handleSelectComplex}
-          />
-        )}
+        <MapMarkers
+          complexes={complexes}
+          zoom={zoom}
+          selectedId={selectedComplex?.id ?? null}
+          onSelect={handleSelectComplex}
+        />
       </MapContainer>
 
       <div className="pointer-events-none absolute inset-0 z-[1000] flex flex-col p-4 pb-16">
@@ -403,32 +331,6 @@ export default function MapView() {
         panelOpen={panelOpen}
         onSelectBuilding={handleSelectComplex}
       />
-
-      {!panelOpen &&
-        userOutsideNyc === true &&
-        !visitorNoticeDismissed && (
-          <div className="pointer-events-none absolute left-4 right-4 top-[4.5rem] z-[1000]">
-            <NycCoverageNotice
-              variant="visitor"
-              onFlyToNyc={() => setFlyNycKey((k) => k + 1)}
-              onDismiss={() => {
-                dismissVisitorCoverageNotice();
-                setVisitorNoticeDismissed(true);
-              }}
-            />
-          </div>
-        )}
-
-      {!panelOpen &&
-        viewportOutsideNyc &&
-        (userOutsideNyc !== true || visitorNoticeDismissed) && (
-          <div className="pointer-events-none absolute left-4 right-4 top-[4.5rem] z-[1000]">
-            <NycCoverageNotice
-              variant="viewport"
-              onFlyToNyc={() => setFlyNycKey((k) => k + 1)}
-            />
-          </div>
-        )}
 
       {loading && !panelOpen && (
         <div className="pointer-events-none absolute right-4 top-20 z-[1000] rounded-full border border-neutral-800 bg-neutral-950/90 px-3 py-1.5 text-xs text-neutral-400 backdrop-blur">

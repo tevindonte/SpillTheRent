@@ -5,6 +5,7 @@ import MarkerClusterGroup from "react-leaflet-markercluster";
 import L from "leaflet";
 import type { Complex } from "@/lib/complexes";
 import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
+import { filterValidMapComplexes } from "@/lib/map-coordinates";
 import { createScoreClusterIcon } from "@/lib/map-marker-style";
 import { ComplexMarker } from "./ComplexMarker";
 
@@ -21,6 +22,11 @@ export function MapMarkers({
   selectedId,
   onSelect,
 }: MapMarkersProps) {
+  const visible = useMemo(
+    () => filterValidMapComplexes(complexes),
+    [complexes]
+  );
+
   const canvasRenderer = useMemo(
     () => L.canvas({ padding: 0.5, tolerance: 3 }),
     []
@@ -44,7 +50,7 @@ export function MapMarkers({
       removeOutsideVisibleBounds={false}
       iconCreateFunction={iconCreateFunction}
     >
-      {complexes.map((complex) => (
+      {visible.map((complex) => (
         <ComplexMarker
           key={complex.id}
           complex={complex}

@@ -4,16 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { LatLngBounds } from "leaflet";
 import { fetchComplexesInBounds, type Complex, type MapFilters } from "@/lib/complexes";
 import { fetchComplexesBoundsApi } from "@/lib/fetch-complexes-bounds-api";
-import { probeMvtAvailable, resetMvtProbeCache } from "@/lib/mvt-probe";
 import {
   expandBounds,
   getTileKeys,
+  hasValidMapCoordinates,
   isInBounds,
   latLngBoundsToMapBounds,
-  MARKER_ZOOM_THRESHOLD,
   tileToBounds,
   type MapBounds,
 } from "@/lib/map-bounds";
+import { filterValidMapComplexes } from "@/lib/map-coordinates";
 
 const MAX_CONCURRENT_TILE_FETCHES = 4;
 /** Use one bounds RPC when many tiles would fan out. */
@@ -39,21 +39,12 @@ export function useViewportComplexes(filters: MapFilters = {}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(13);
-  const [mvtAvailable, setMvtAvailable] = useState<boolean | null>(null);
-  const mvtAvailableRef = useRef<boolean | null>(null);
-  mvtAvailableRef.current = mvtAvailable;
 
   const clearCache = useCallback(() => {
     cacheRef.current.clear();
     fetchedTilesRef.current.clear();
     pendingTilesRef.current.clear();
   }, []);
-
-  useEffect(() => {
-    resetMvtProbeCache();
-    setMvtAvailable(null);
-    void probeMvtAvailable(filters).then(setMvtAvailable);
-  }, [filtersKey(filters)]);
 
   useEffect(() => {
     clearCache();
@@ -63,12 +54,15 @@ export function useViewportComplexes(filters: MapFilters = {}) {
       void loadForBounds(bounds, z);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtersKey(filters), mvtAvailable]);
+  }, [filtersKey(filters)]);
 
   const syncDisplayList = useCallback((viewport: MapBounds) => {
     const list: Complex[] = [];
     cacheRef.current.forEach((complex) => {
-      if (isInBounds(complex.lat, complex.lng, viewport)) {
+      if (
+        hasValidMapCoordinates(complex) &&
+        isInBounds(complex.lat, complex.lng, viewport)
+      ) {
         list.push(complex);
       }
     });
@@ -82,42 +76,6 @@ export function useViewportComplexes(filters: MapFilters = {}) {
       setZoom(nextZoom);
 
       const viewport = latLngBoundsToMapBounds(bounds);
-
-      // Zoomed out: MVT draws buildings when tiles work; otherwise one GeoJSON bounds load.
-      if (nextZoom < MARKER_ZOOM_THRESHOLD) {
-        const useMvt = mvtAvailableRef.current !== false;
-        if (useMvt) {
-          setComplexes([]);
-          setLoading(mvtAvailableRef.current === null);
-          setError(null);
-          return;
-        }
-
-        setLoading(true);
-        setError(null);
-        try {
-          const batch = await fetchComplexesBoundsApi(
-            expandBounds(viewport),
-            filtersRef.current
-          );
-          if (requestIdRef.current === requestId) {
-            setComplexes(batch);
-          }
-        } catch (e) {
-          if (requestIdRef.current === requestId) {
-            setError(
-              e instanceof Error ? e.message : "Failed to load buildings"
-            );
-            setComplexes([]);
-          }
-        } finally {
-          if (requestIdRef.current === requestId) {
-            setLoading(false);
-          }
-        }
-        return;
-      }
-
       const fetchBounds = expandBounds(viewport);
       const tileKeys = getTileKeys(fetchBounds);
       const missingTiles = tileKeys.filter(
@@ -137,9 +95,8 @@ export function useViewportComplexes(filters: MapFilters = {}) {
       try {
         if (missingTiles.length >= BOUNDS_API_TILE_THRESHOLD) {
           try {
-            const batch = await fetchComplexesBoundsApi(
-              fetchBounds,
-              filtersRef.current
+            const batch = filterValidMapComplexes(
+              await fetchComplexesBoundsApi(fetchBounds, filtersRef.current)
             );
             for (const complex of batch) {
               cacheRef.current.set(complex.id, complex);
@@ -162,9 +119,8 @@ export function useViewportComplexes(filters: MapFilters = {}) {
           pendingTilesRef.current.add(tileKey);
           try {
             const tileBounds = tileToBounds(tileKey);
-            const batch = await fetchComplexesInBounds(
-              tileBounds,
-              filtersRef.current
+            const batch = filterValidMapComplexes(
+              await fetchComplexesInBounds(tileBounds, filtersRef.current)
             );
             for (const complex of batch) {
               cacheRef.current.set(complex.id, complex);
@@ -207,7 +163,6 @@ export function useViewportComplexes(filters: MapFilters = {}) {
     loading,
     error,
     zoom,
-    mvtAvailable,
     loadForBounds,
     clearCache,
     noteBoundsDebounced,

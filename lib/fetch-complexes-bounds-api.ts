@@ -1,4 +1,5 @@
 import type { Complex, MapFilters } from "@/lib/complexes";
+import { filterValidMapComplexes } from "@/lib/map-coordinates";
 import type { MapBounds } from "@/lib/map-bounds";
 
 type GeoJsonFeature = {
@@ -71,5 +72,5 @@ export async function fetchComplexesBoundsApi(
     );
   }
   const features = (body.features ?? []) as GeoJsonFeature[];
-  return features.map(featureToComplex);
+  return filterValidMapComplexes(features.map(featureToComplex));
 }

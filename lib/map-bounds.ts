@@ -76,3 +76,15 @@ export function isInBounds(
     lng <= bounds.east
   );
 }
+
+export function hasValidMapCoordinates(
+  complex: { lat?: number | null; lng?: number | null }
+): boolean {
+  const { lat, lng } = complex;
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng)
+  );
+}
