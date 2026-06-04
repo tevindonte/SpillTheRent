@@ -1,12 +1,16 @@
 {
   "manifest_version": 3,
   "name": "spillthe.rent — NYC Building Intel",
-  "version": "0.2.0",
-  "description": "See HPD violations and tenant reviews on StreetEasy listings before you tour.",
+  "version": "0.3.0",
+  "description": "See HPD violations and tenant reviews on StreetEasy, Zillow, and Apartments.com before you tour.",
   "permissions": ["storage"],
   "host_permissions": [
     "https://streeteasy.com/*",
     "https://www.streeteasy.com/*",
+    "https://zillow.com/*",
+    "https://www.zillow.com/*",
+    "https://apartments.com/*",
+    "https://www.apartments.com/*",
     "https://spillthe.rent/*"
   ],
   "action": {
@@ -17,7 +21,11 @@
     {
       "matches": [
         "https://streeteasy.com/*",
-        "https://www.streeteasy.com/*"
+        "https://www.streeteasy.com/*",
+        "https://zillow.com/*",
+        "https://www.zillow.com/*",
+        "https://apartments.com/*",
+        "https://www.apartments.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"],

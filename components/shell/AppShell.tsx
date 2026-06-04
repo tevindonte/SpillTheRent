@@ -6,6 +6,7 @@ import {
   OnboardingSlides,
   hasCompletedOnboarding,
 } from "@/components/onboarding/OnboardingSlides";
+import { ActivityFeed } from "@/components/feed/ActivityFeed";
 import { ProfileView } from "@/components/profile/ProfileView";
 import { BottomTabBar, type AppTab } from "./BottomTabBar";
 
@@ -46,9 +47,9 @@ export default function AppShell() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-neutral-950">
       <main className="absolute inset-0 bottom-14 overflow-hidden">
-        {tab === "map" ? (
-          <MapView />
-        ) : (
+        {tab === "map" && <MapView />}
+        {tab === "feed" && <ActivityFeed embedded />}
+        {tab === "profile" && (
           <ProfileView onGoToMap={() => setTab("map")} />
         )}
       </main>

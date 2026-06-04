@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 
-export type AppTab = "map" | "profile";
+export type AppTab = "map" | "feed" | "profile";
 
 type BottomTabBarProps = {
   active: AppTab;
@@ -28,6 +28,26 @@ const TABS: { id: AppTab; label: string; icon: (active: boolean) => ReactElement
           d="M9 20l-5.447-2.724A2 2 0 013 15.382V6.618a2 2 0 011.553-1.946L12 2l7.447 2.672A2 2 0 0121 6.618v8.764a2 2 0 01-1.553 1.946L15 20l-3-1.5-3 1.5z"
         />
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 2v17.5" />
+      </svg>
+    ),
+  },
+  {
+    id: "feed",
+    label: "Activity",
+    icon: (active) => (
+      <svg
+        viewBox="0 0 24 24"
+        className={`h-5 w-5 ${active ? "text-neutral-100" : "text-neutral-500"}`}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        aria-hidden
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4 6h16M4 10h16M4 14h10M4 18h6"
+        />
       </svg>
     ),
   },

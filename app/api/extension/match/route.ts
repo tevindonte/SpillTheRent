@@ -4,6 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const ALLOWED = new Set([
   "https://www.streeteasy.com",
   "https://streeteasy.com",
+  "https://www.zillow.com",
+  "https://zillow.com",
+  "https://www.apartments.com",
+  "https://apartments.com",
 ]);
 
 function corsHeaders(request: NextRequest) {

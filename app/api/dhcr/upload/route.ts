@@ -96,6 +96,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: rowError.message }, { status: 500 });
   }
 
+  const linkedComplexId =
+    typeof complexId === "string" && complexId.length > 0 ? complexId : null;
+
+  if (linkedComplexId && parsed?.suggested_legal_rent) {
+    await admin.from("pricing_history").insert({
+      complex_id: linkedComplexId,
+      rent: Math.round(parsed.suggested_legal_rent),
+      user_id: user.id,
+      is_anonymous: true,
+    });
+  }
+
+  if (linkedComplexId) {
+    const { data: complexRow } = await admin
+      .from("complexes")
+      .select("name")
+      .eq("id", linkedComplexId)
+      .maybeSingle();
+
+    await admin.rpc("log_building_event", {
+      p_complex_id: linkedComplexId,
+      p_event_type: "rent_report",
+      p_title: `${(complexRow?.name as string) ?? "Building"}: DHCR rent history`,
+      p_summary: parsed?.suggested_legal_rent
+        ? `Extracted ~$${Math.round(parsed.suggested_legal_rent)}/mo from DHCR PDF`
+        : "DHCR PDF uploaded",
+      p_payload: {
+        submission_id: submissionId,
+        source: "dhcr",
+        overcharge_hint: parsed?.overcharge_hint ?? false,
+      },
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     submissionId,

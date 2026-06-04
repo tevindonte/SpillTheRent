@@ -32,4 +32,7 @@ jobs:
           }
           check "/"
           check "/feed"
+          check "/tools/rent-history"
           check "/api/data-freshness"
+          check "/api/complexes/geojson?south=40.7&north=40.8&west=-74.02&east=-73.9"
+          check "/api/complexes/mvt/12/1205/1539"
