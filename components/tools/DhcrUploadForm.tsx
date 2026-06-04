@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
+import { formatRent } from "@/lib/format";
+
+type DhcrParsed = {
+  rent_lines: { amount: number; context: string }[];
+  suggested_legal_rent: number | null;
+  max_rent_in_doc: number | null;
+  overcharge_hint: boolean;
+};
 
 export function DhcrUploadForm() {
   const { user } = useAuth();
@@ -10,6 +18,7 @@ export function DhcrUploadForm() {
   const [complexId, setComplexId] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
   const [message, setMessage] = useState("");
+  const [parsed, setParsed] = useState<DhcrParsed | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,6 +35,7 @@ export function DhcrUploadForm() {
 
     setStatus("loading");
     setMessage("");
+    setParsed(null);
 
     const form = new FormData();
     form.append("file", file);
@@ -37,6 +47,7 @@ export function DhcrUploadForm() {
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setStatus("ok");
       setMessage(data.message ?? "Uploaded successfully.");
+      setParsed(data.parsed ?? null);
       setFile(null);
     } catch (err) {
       setStatus("error");
@@ -58,11 +69,11 @@ export function DhcrUploadForm() {
   return (
     <form onSubmit={(e) => void submit(e)} className="mt-6 space-y-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-orange-400">
-        Beta: upload DHCR PDF
+        Upload DHCR rent history (beta)
       </h2>
       <p className="text-xs text-neutral-500">
-        Optional building ID from the map URL (
-        <code className="text-neutral-400">?building=uuid</code>).
+        We extract rent amounts from your PDF automatically. Optional building ID
+        from the map URL (<code className="text-neutral-400">?building=uuid</code>).
       </p>
       <input
         type="text"
@@ -82,7 +93,7 @@ export function DhcrUploadForm() {
         disabled={status === "loading"}
         className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-orange-400 disabled:opacity-50"
       >
-        {status === "loading" ? "Uploading…" : "Upload for overcharge check"}
+        {status === "loading" ? "Parsing PDF…" : "Upload & parse"}
       </button>
       {message && (
         <p
@@ -90,6 +101,41 @@ export function DhcrUploadForm() {
         >
           {message}
         </p>
+      )}
+
+      {parsed && (
+        <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-950/80 p-4 text-sm">
+          {parsed.overcharge_hint && (
+            <p className="mb-2 font-medium text-amber-300">
+              Possible overcharge pattern detected — verify with DHCR or a tenant attorney.
+            </p>
+          )}
+          {parsed.suggested_legal_rent != null && (
+            <p className="text-neutral-300">
+              Mid-range rent in document:{" "}
+              <strong>{formatRent(parsed.suggested_legal_rent)}/mo</strong>
+              {parsed.max_rent_in_doc != null &&
+                parsed.max_rent_in_doc !== parsed.suggested_legal_rent && (
+                  <>
+                    {" "}
+                    · high: <strong>{formatRent(parsed.max_rent_in_doc)}/mo</strong>
+                  </>
+                )}
+            </p>
+          )}
+          {parsed.rent_lines.length > 0 && (
+            <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-neutral-500">
+              {parsed.rent_lines.slice(0, 12).map((line) => (
+                <li key={line.amount}>
+                  {formatRent(line.amount)}/mo — {line.context.slice(0, 80)}…
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-3 text-[10px] text-neutral-600">
+            Automated extraction — not legal advice. Official DHCR letter controls.
+          </p>
+        </div>
       )}
     </form>
   );

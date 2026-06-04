@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWatchlistAlertEmail } from "@/lib/email/watchlist-alert";
 import { getSiteOrigin } from "@/lib/seo";
+import { isPremiumActive } from "@/lib/stripe";
 
 const LOOKBACK_HOURS = 48;
 
@@ -87,9 +88,11 @@ export async function GET(request: NextRequest) {
   for (const job of pending) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("email, handle")
+      .select("email, handle, watchlist_premium_until")
       .eq("id", job.user_id)
       .maybeSingle();
+
+    if (!isPremiumActive(profile?.watchlist_premium_until)) continue;
 
     const email = profile?.email?.trim();
     if (!email) continue;

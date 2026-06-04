@@ -52,7 +52,7 @@ export function WatchlistButton({
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setSaved(true);
-          onToast("Saved — email alerts when activity hits this building.");
+          onToast("Saved. Lease Shield subscribers get email alerts on this building.");
         } else if (res.status === 403 && data.upgrade) {
           onToast(data.error ?? "Watchlist limit reached. Upgrade on your profile.");
         } else if (data.error) {

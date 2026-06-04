@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { ensureProfile } from "@/lib/profile";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { parseDhcrPdf } from "@/lib/dhcr-parse";
+
+export const runtime = "nodejs";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
@@ -63,6 +66,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let parsed = null;
+  let parse_error: string | null = null;
+  let status: "pending" | "parsed" | "failed" = "pending";
+
+  try {
+    parsed = await parseDhcrPdf(buffer);
+    status = "parsed";
+  } catch (e) {
+    parse_error = e instanceof Error ? e.message : "Could not read PDF text";
+    status = "failed";
+  }
+
   const { error: rowError } = await admin.from("dhcr_submissions").insert({
     id: submissionId,
     user_id: user.id,
@@ -70,7 +85,10 @@ export async function POST(request: NextRequest) {
       typeof complexId === "string" && complexId.length > 0 ? complexId : null,
     storage_path: storagePath,
     file_name: file.name,
-    status: "pending",
+    status,
+    parsed_data: parsed,
+    parse_error,
+    parsed_at: parsed ? new Date().toISOString() : null,
   });
 
   if (rowError) {
@@ -81,7 +99,14 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     submissionId,
+    status,
+    parsed,
+    parse_error,
     message:
-      "DHCR document received. We'll parse rent history and email you when your overcharge check is ready.",
+      status === "parsed"
+        ? parsed?.overcharge_hint
+          ? "We found a possible overcharge pattern — review the amounts below. Not legal advice."
+          : "Rent amounts extracted from your DHCR PDF. Cross-check against your lease."
+        : "Document saved. We could not auto-read text — our team can review manually.",
   });
 }
