@@ -9,6 +9,7 @@ import {
   getTileKeys,
   isInBounds,
   latLngBoundsToMapBounds,
+  MARKER_ZOOM_THRESHOLD,
   tileToBounds,
   type MapBounds,
 } from "@/lib/map-bounds";
@@ -71,6 +72,15 @@ export function useViewportComplexes(filters: MapFilters = {}) {
       setZoom(nextZoom);
 
       const viewport = latLngBoundsToMapBounds(bounds);
+
+      // Zoomed out: MVT layer draws buildings; avoid loading thousands of markers.
+      if (nextZoom < MARKER_ZOOM_THRESHOLD) {
+        setComplexes([]);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+
       const fetchBounds = expandBounds(viewport);
       const tileKeys = getTileKeys(fetchBounds);
       const missingTiles = tileKeys.filter(
