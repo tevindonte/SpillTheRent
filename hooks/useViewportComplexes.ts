@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LatLngBounds } from "leaflet";
 import { fetchComplexesInBounds, type Complex, type MapFilters } from "@/lib/complexes";
-import { fetchComplexesBoundsApi } from "@/lib/fetch-complexes-bounds-api";
 import {
   expandBounds,
   getTileKeys,
@@ -13,11 +12,8 @@ import {
   tileToBounds,
   type MapBounds,
 } from "@/lib/map-bounds";
-import { filterValidMapComplexes } from "@/lib/map-coordinates";
 
 const MAX_CONCURRENT_TILE_FETCHES = 4;
-/** Use one bounds RPC when many tiles would fan out. */
-const BOUNDS_API_TILE_THRESHOLD = 3;
 
 function filtersKey(filters: MapFilters): string {
   return JSON.stringify(filters);
@@ -93,37 +89,20 @@ export function useViewportComplexes(filters: MapFilters = {}) {
       setError(null);
 
       try {
-        if (missingTiles.length >= BOUNDS_API_TILE_THRESHOLD) {
-          try {
-            const batch = filterValidMapComplexes(
-              await fetchComplexesBoundsApi(fetchBounds, filtersRef.current)
-            );
-            for (const complex of batch) {
-              cacheRef.current.set(complex.id, complex);
-            }
-            for (const key of missingTiles) {
-              fetchedTilesRef.current.add(key);
-            }
-            if (requestIdRef.current === requestId) {
-              syncDisplayList(viewport);
-            }
-            return;
-          } catch {
-            /* fall through to per-tile client fetch */
-          }
-        }
-
         const fetchTile = async (tileKey: string) => {
           if (fetchedTilesRef.current.has(tileKey)) return;
 
           pendingTilesRef.current.add(tileKey);
           try {
             const tileBounds = tileToBounds(tileKey);
-            const batch = filterValidMapComplexes(
-              await fetchComplexesInBounds(tileBounds, filtersRef.current)
+            const batch = await fetchComplexesInBounds(
+              tileBounds,
+              filtersRef.current
             );
             for (const complex of batch) {
-              cacheRef.current.set(complex.id, complex);
+              if (hasValidMapCoordinates(complex)) {
+                cacheRef.current.set(complex.id, complex);
+              }
             }
             fetchedTilesRef.current.add(tileKey);
           } finally {
