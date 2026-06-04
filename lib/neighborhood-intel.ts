@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { boroughDbMatch, type BoroughSlug } from "@/lib/neighborhoods";
+import type { RentTrendPoint } from "@/components/neighborhood/RentTrendBars";
 
 export type NeighborhoodIntel = {
   name: string;
@@ -30,7 +31,58 @@ export type NeighborhoodIntel = {
     cached_review_count: number | null;
     hpd_open_violations: number | null;
   }[];
+  rent_trends: RentTrendPoint[];
 };
+
+async function loadRentTrends(
+  supabase: ReturnType<typeof createAdminClient>,
+  complexIds: string[]
+): Promise<RentTrendPoint[]> {
+  if (!complexIds.length) return [];
+
+  const rentsByMonth = new Map<string, number[]>();
+  const chunkSize = 120;
+
+  for (let i = 0; i < complexIds.length; i += chunkSize) {
+    const chunk = complexIds.slice(i, i + chunkSize);
+    const { data } = await supabase
+      .from("pricing_history")
+      .select("rent, recorded_at")
+      .in("complex_id", chunk)
+      .not("rent", "is", null)
+      .gte(
+        "recorded_at",
+        new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
+      );
+
+    for (const row of data ?? []) {
+      const rent = row.rent as number;
+      const d = new Date(row.recorded_at as string);
+      if (!Number.isFinite(rent) || Number.isNaN(d.getTime())) continue;
+      const month = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+      const list = rentsByMonth.get(month) ?? [];
+      list.push(rent);
+      rentsByMonth.set(month, list);
+    }
+  }
+
+  const months = Array.from(rentsByMonth.keys()).sort();
+  return months.slice(-12).map((month) => {
+    const vals = rentsByMonth.get(month)!;
+    vals.sort((a, b) => a - b);
+    const mid = vals[Math.floor(vals.length / 2)];
+    const [, m] = month.split("-");
+    const label = new Date(2000, parseInt(m, 10) - 1, 1).toLocaleString("en-US", {
+      month: "short",
+    });
+    return {
+      month,
+      label,
+      median_rent: mid,
+      sample_count: vals.length,
+    };
+  });
+}
 
 function normalizeNeighborhoodSlug(name: string | null): string {
   return (name ?? "").toLowerCase().replace(/\s+/g, "-");
@@ -144,6 +196,8 @@ export async function loadNeighborhoodIntel(
     }));
   }
 
+  const rent_trends = await loadRentTrends(supabase, complexIds);
+
   return {
     name,
     building_count: matched.length,
@@ -156,6 +210,7 @@ export async function loadNeighborhoodIntel(
     top_red_flags,
     worst_landlords,
     recent_events,
+    rent_trends,
     buildings: matched
       .sort(
         (a, b) =>

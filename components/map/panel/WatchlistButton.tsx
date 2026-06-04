@@ -49,9 +49,14 @@ export function WatchlistButton({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ complex_id: complexId }),
         });
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
           setSaved(true);
-          onToast("Saved — we’ll add email alerts soon.");
+          onToast("Saved — email alerts when activity hits this building.");
+        } else if (res.status === 403 && data.upgrade) {
+          onToast(data.error ?? "Watchlist limit reached. Upgrade on your profile.");
+        } else if (data.error) {
+          onToast(data.error);
         }
       }
     } finally {

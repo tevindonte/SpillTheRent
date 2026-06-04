@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "spillthe.rent — NYC Building Intel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "See HPD violations and tenant reviews on StreetEasy listings before you tour.",
   "permissions": ["storage"],
   "host_permissions": [

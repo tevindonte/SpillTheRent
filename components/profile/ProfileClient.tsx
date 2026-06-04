@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Profile } from "@/lib/profile";
 import { RED_FLAG_OPTIONS } from "@/lib/submissions/constants";
+import { LeaseShieldCard } from "./LeaseShieldCard";
 
 type Tab = "overview" | "reviews" | "rentals" | "settings";
 
@@ -151,6 +152,12 @@ export function ProfileClient({
                 {new Date(profile.member_since).toLocaleDateString()}
               </p>
             </div>
+            <LeaseShieldCard
+              premium={
+                !!profile.watchlist_premium_until &&
+                new Date(profile.watchlist_premium_until) > new Date()
+              }
+            />
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 text-center">
                 <p className="text-2xl font-semibold text-orange-500">

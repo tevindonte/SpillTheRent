@@ -7,6 +7,7 @@ export type Profile = {
   email: string | null;
   member_since: string;
   is_public: boolean;
+  watchlist_premium_until?: string | null;
 };
 
 export async function getProfile(

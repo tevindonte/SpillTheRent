@@ -7,6 +7,7 @@ import {
 } from "@/lib/neighborhoods";
 import { loadNeighborhoodIntel } from "@/lib/neighborhood-intel";
 import { getSiteOrigin } from "@/lib/seo";
+import { RentTrendBars } from "@/components/neighborhood/RentTrendBars";
 import { formatRent } from "@/lib/format";
 import { formatRelativeTime } from "@/lib/relative-time";
 
@@ -102,6 +103,13 @@ export default async function NeighborhoodPage({ params }: Props) {
             {hood.building_count}
           </p>
         </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          Rent trend (last 12 months)
+        </h2>
+        <RentTrendBars points={hood.rent_trends} />
       </section>
 
       {hood.top_red_flags.length > 0 && (
