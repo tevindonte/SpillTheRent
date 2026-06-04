@@ -11,9 +11,13 @@ import {
   MANHATTAN_CENTER,
   MAP_TILE_ATTRIBUTION,
   MAP_TILE_URL,
-  NYC_MAP_BOUNDS,
 } from "@/lib/map";
+import {
+  dismissVisitorCoverageNotice,
+  isVisitorCoverageNoticeDismissed,
+} from "@/lib/coverage-notice";
 import { viewportOverlapsNyc } from "@/lib/nyc-service-area";
+import { useUserOutsideNyc } from "@/hooks/useUserOutsideNyc";
 import { latLngBoundsToMapBounds } from "@/lib/map-bounds";
 import { BoroughFlyTo } from "./BoroughFlyTo";
 import { useViewportComplexes } from "@/hooks/useViewportComplexes";
@@ -39,6 +43,7 @@ import {
   parseCompareParam,
 } from "@/lib/compare-url";
 import { GeoTeaPrompt } from "./GeoTeaPrompt";
+import { NycCoverageNotice } from "./NycCoverageNotice";
 
 function FlyToComplex({ complex }: { complex: Complex | null }) {
   const map = useMap();
@@ -102,7 +107,9 @@ export default function MapView() {
   const [addOpen, setAddOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareCount, setCompareCount] = useState(0);
-  const [outsideNyc, setOutsideNyc] = useState(false);
+  const [viewportOutsideNyc, setViewportOutsideNyc] = useState(false);
+  const [visitorNoticeDismissed, setVisitorNoticeDismissed] = useState(true);
+  const userOutsideNyc = useUserOutsideNyc();
   const [reviewComplex, setReviewComplex] = useState<Complex | null>(null);
   const [rentComplex, setRentComplex] = useState<Complex | null>(null);
 
@@ -166,7 +173,7 @@ export default function MapView() {
 
   const handleViewportChange = useCallback(
     (bounds: LatLngBounds, nextZoom: number) => {
-      setOutsideNyc(!viewportOverlapsNyc(latLngBoundsToMapBounds(bounds)));
+      setViewportOutsideNyc(!viewportOverlapsNyc(latLngBoundsToMapBounds(bounds)));
       noteBoundsDebounced();
       loadForBounds(bounds, nextZoom);
       fetchStats(bounds);
@@ -175,6 +182,10 @@ export default function MapView() {
   );
 
   const [flyNycKey, setFlyNycKey] = useState(0);
+
+  useEffect(() => {
+    setVisitorNoticeDismissed(isVisitorCoverageNoticeDismissed());
+  }, []);
 
   const handleSelectComplex = useCallback(
     (complex: Complex) => {
@@ -278,8 +289,6 @@ export default function MapView() {
         className="h-full w-full z-0"
         preferCanvas
         zoomControl={false}
-        maxBounds={NYC_MAP_BOUNDS}
-        maxBoundsViscosity={0.9}
       >
         <ZoomControl position="bottomleft" />
         <TileLayer url={MAP_TILE_URL} attribution={MAP_TILE_ATTRIBUTION} />
@@ -351,23 +360,33 @@ export default function MapView() {
         onSelectBuilding={handleSelectComplex}
       />
 
-      {outsideNyc && !panelOpen && (
-        <div className="pointer-events-auto absolute left-4 right-4 top-20 z-[1000] mx-auto max-w-md rounded-xl border border-orange-500/40 bg-neutral-950/95 p-4 text-center shadow-xl backdrop-blur">
-          <p className="text-sm text-neutral-200">
-            spillthe.rent only covers <strong>Manhattan, Brooklyn &amp; LIC</strong>.
-            Pan back to NYC to see buildings.
-          </p>
-          <button
-            type="button"
-            onClick={() => setFlyNycKey((k) => k + 1)}
-            className="mt-3 rounded-lg bg-orange-500 px-4 py-2 text-xs font-semibold text-neutral-950 hover:bg-orange-400"
-          >
-            Go to NYC map
-          </button>
-        </div>
-      )}
+      {!panelOpen &&
+        userOutsideNyc === true &&
+        !visitorNoticeDismissed && (
+          <div className="pointer-events-none absolute left-4 right-4 top-[4.5rem] z-[1000]">
+            <NycCoverageNotice
+              variant="visitor"
+              onFlyToNyc={() => setFlyNycKey((k) => k + 1)}
+              onDismiss={() => {
+                dismissVisitorCoverageNotice();
+                setVisitorNoticeDismissed(true);
+              }}
+            />
+          </div>
+        )}
 
-      {loading && !panelOpen && !outsideNyc && (
+      {!panelOpen &&
+        viewportOutsideNyc &&
+        (userOutsideNyc !== true || visitorNoticeDismissed) && (
+          <div className="pointer-events-none absolute left-4 right-4 top-[4.5rem] z-[1000]">
+            <NycCoverageNotice
+              variant="viewport"
+              onFlyToNyc={() => setFlyNycKey((k) => k + 1)}
+            />
+          </div>
+        )}
+
+      {loading && !panelOpen && !viewportOutsideNyc && (
         <div className="pointer-events-none absolute right-4 top-20 z-[1000] rounded-full border border-neutral-800 bg-neutral-950/90 px-3 py-1.5 text-xs text-neutral-400 backdrop-blur">
           Loading map…
         </div>
