@@ -1,6 +1,17 @@
-/** OpenStreetMap-based dark tiles (Carto uses OSM data; not Google Maps). */
-export const MAP_TILE_URL =
-  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+/**
+ * Dark Matter raster tiles from CARTO (OSM data).
+ * Free API key required — without it every tile is watermarked
+ * "API KEY REQUIRED / carto.com/basemaps/apikey".
+ * Request: https://carto.com/basemaps/apikey/
+ */
+function cartoTileUrl(): string {
+  const base =
+    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+  const key = process.env.NEXT_PUBLIC_CARTO_API_KEY?.trim();
+  return key ? `${base}?key=${encodeURIComponent(key)}` : base;
+}
+
+export const MAP_TILE_URL = cartoTileUrl();
 
 export const MAP_TILE_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';

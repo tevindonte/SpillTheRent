@@ -179,9 +179,16 @@ Until then, ignore MVT migrations for map UX.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | App |
 | `SUPABASE_SERVICE_ROLE_KEY` | API admin, webhooks, cron |
 | `NEXT_PUBLIC_SITE_URL` | Auth links, Stripe redirects |
+| `NEXT_PUBLIC_CARTO_API_KEY` | Map basemap (no “API KEY REQUIRED” watermark) |
 | `STRIPE_SECRET_KEY` | Lease Shield |
 | `STRIPE_WEBHOOK_SECRET` | Premium after payment |
 | `CRON_SECRET` | Watchlist alert cron |
+
+### CARTO basemap key (do this if the map shows carto.com watermarks)
+
+1. Request a free key: [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/) (~5M tiles/month).
+2. Render → Environment → add `NEXT_PUBLIC_CARTO_API_KEY` = that key.
+3. Redeploy (must rebuild — `NEXT_PUBLIC_*` is baked in at build time).
 
 ---
 
