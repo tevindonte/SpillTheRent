@@ -4,16 +4,59 @@ Extension ID: `bddecdkjeggppempopcmkagelgbodhon` (from your dashboard)
 
 ## Privacy tab (required before publish)
 
-| Field | URL |
-|-------|-----|
-| Privacy policy | `https://spillthe.rent/privacy` |
+Deploy `main` first so `https://spillthe.rent/privacy` is live.
 
-Deploy `main` first so that URL is live.
+### Single purpose description
+
+```
+Show NYC building safety and tenant-review information on rental listing pages. When a user views a listing on StreetEasy, Zillow, or Apartments.com, the extension reads the public listing address or title on that page, matches it to spillthe.rent’s building database, and displays open HPD violation counts plus a link to the full building rap sheet on spillthe.rent.
+```
+
+### storage justification
+
+(already filled — keep as-is)
+
+```
+Save optional custom API base URL in extension settings.
+```
+
+### Host permission justification
+
+```
+streeteasy.com / zillow.com / apartments.com: Run a content script only on rental listing pages the user opens. The script reads the visible listing address or title from the page DOM to match a building—nothing else on those sites (no passwords, forms, or browsing history).
+
+spillthe.rent: Send that address/title to our public /api/extension/match endpoint and open the user’s building rap sheet when they click the banner link. No remote code is loaded from our server—only JSON responses.
+```
+
+### Remote code
+
+Select: **No, I am not using Remote code**
+
+(All JavaScript and CSS are bundled in the extension package. The API returns JSON only; nothing is eval’d or injected as scripts from the network.)
+
+### Data usage — what to check
+
+| Checkbox | Extension? |
+|----------|------------|
+| Personally identifiable information | **No** (extension does not ask for name, email, or account) |
+| Health / Financial / Authentication / Personal communications | **No** |
+| Location | **No** (no GPS; listing address is not device location) |
+| Web history | **No** (no record of sites visited over time) |
+| User activity | **No** (no keystroke, scroll, or click logging) |
+| **Website content** | **Yes** — reads public listing address/title text on the open page and sends it to spillthe.rent for building match |
+
+Check all three certification boxes at the bottom.
+
+### Privacy policy URL
+
+```
+https://spillthe.rent/privacy
+```
 
 ## Store listing → Product details
 
 **Title** (from package — keep):  
-`spillthe.rent — NYC Building Intel`
+`spillthe.rent NYC Building Intel`
 
 **Summary** (from package — keep or use):  
 `See HPD violations and tenant reviews on StreetEasy, Zillow, and Apartments.com before you tour.`

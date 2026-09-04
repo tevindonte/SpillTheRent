@@ -154,7 +154,10 @@ export function parseCoordinates(raw: unknown): { lat: number; lng: number } | n
 }
 
 export function ratingColor(rating: number | null): string {
-  if (rating == null) return "#6b7280";
+  // No data / unscored must not look like a bad rating.
+  if (rating == null || !Number.isFinite(rating) || rating < 1) {
+    return "#6b7280";
+  }
   if (rating >= 4) return "#22c55e";
   if (rating >= 3) return "#eab308";
   return "#ef4444";
@@ -192,10 +195,10 @@ function rowToComplex(row: MapSummaryRow): Complex {
 
 /** Marker + filter fields only; panel loads full detail on click. */
 const MAP_SUMMARY_COLUMNS_SLIM =
-  "id, name, address, lat, lng, google_rating, median_rent, cached_median_rent, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+  "id, name, address, lat, lng, google_rating, google_review_count, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
 
 const MAP_SUMMARY_COLUMNS_SLIM_LEGACY =
-  "id, name, address, lat, lng, google_rating, median_rent, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+  "id, name, address, lat, lng, google_rating, google_review_count, median_rent, review_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
 
 /** Production DBs before 20260605000001_product_features.sql */
 const MAP_SUMMARY_COLUMNS_LEGACY =

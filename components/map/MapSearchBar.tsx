@@ -107,7 +107,7 @@ export function MapSearchBar({ onSelectBuilding }: MapSearchBarProps) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
-        placeholder="Search any building in Manhattan…"
+        placeholder="Search any building in NYC…"
         disabled={selecting}
         className="w-full rounded-xl border border-neutral-700 bg-neutral-900/95 px-4 py-3 text-sm text-neutral-100 shadow-lg backdrop-blur-sm placeholder:text-neutral-500 outline-none focus:border-orange-500/50"
       />

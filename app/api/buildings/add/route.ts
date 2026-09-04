@@ -17,37 +17,43 @@ export async function POST(request: NextRequest) {
   }
 
   const payload = body as Record<string, unknown>;
-  const mode = payload.mode as "google" | "manual";
+  const mode = payload.mode as "geocode" | "manual" | "google";
 
   const admin = createAdminClient();
 
-  if (mode === "google") {
-    const { placeId, name, address, lat, lng } = payload as {
-      placeId: string;
+  // "google" kept as alias for older clients; both use Nominatim-sourced fields.
+  if (mode === "geocode" || mode === "google") {
+    const { name, address, lat, lng, zip, borough } = payload as {
       name: string;
       address: string;
       lat?: number;
       lng?: number;
+      zip?: string | null;
+      borough?: string | null;
     };
 
-    if (!placeId || !address) {
-      return NextResponse.json({ error: "Missing place data" }, { status: 400 });
+    if (!address?.trim()) {
+      return NextResponse.json({ error: "Missing address" }, { status: 400 });
+    }
+    if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return NextResponse.json(
+        { error: "Missing coordinates — look up the address again" },
+        { status: 400 }
+      );
     }
 
     const insertRow: Record<string, unknown> = {
-      name: name || address,
-      address,
-      borough: "Manhattan",
+      name: (name || address).trim(),
+      address: address.trim(),
+      borough: borough?.trim() || "Manhattan",
+      zip: zip?.trim() || null,
       verified: true,
-      google_place_id: placeId,
+      google_place_id: null,
       google_rating: null,
       google_review_count: null,
       portal_type: "unknown",
+      coordinates: `SRID=4326;POINT(${lng} ${lat})`,
     };
-
-    if (lat != null && lng != null) {
-      insertRow.coordinates = `SRID=4326;POINT(${lng} ${lat})`;
-    }
 
     const { data: created, error } = await admin
       .from("complexes")
@@ -56,7 +62,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !created) {
-      return NextResponse.json({ error: error?.message ?? "Insert failed" }, { status: 500 });
+      return NextResponse.json(
+        { error: error?.message ?? "Insert failed" },
+        { status: 500 }
+      );
     }
 
     await admin.from("enrichment_queue").insert({
@@ -98,7 +107,10 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error || !created) {
-    return NextResponse.json({ error: error?.message ?? "Insert failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: error?.message ?? "Insert failed" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({

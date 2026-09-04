@@ -33,7 +33,7 @@ export async function shareRapSheetImage(
   ) {
     await navigator.share({
       files: [file],
-      title: `${detail.name} — spillthe.rent Rap Sheet`,
+      title: `${detail.name} · spillthe.rent Rap Sheet`,
       text: "Building intel from spillthe.rent",
     });
     return "shared";

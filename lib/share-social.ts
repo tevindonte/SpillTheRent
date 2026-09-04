@@ -36,7 +36,7 @@ export function twitterShareUrl(detail: BuildingDetail): string {
 
 export function redditShareUrl(detail: BuildingDetail): string {
   const params = new URLSearchParams({
-    title: `Building intel: ${detail.name} — spillthe.rent`,
+    title: `Building intel: ${detail.name} · spillthe.rent`,
     url: buildingShareUrl(detail.id),
   });
   return `https://www.reddit.com/submit?${params.toString()}`;

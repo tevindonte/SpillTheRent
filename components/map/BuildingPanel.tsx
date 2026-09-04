@@ -10,7 +10,7 @@ import {
   type PanelReview,
 } from "@/lib/building-detail";
 import { hpdOnlineUrl, hpdScoreColor, portfolioScoreColor } from "@/lib/hpd";
-import { streetViewProxyUrl, streetViewUrlFromStored } from "@/lib/streetview";
+import { panelMapEmbedUrl } from "@/lib/streetview";
 import { useAuth } from "@/hooks/useAuth";
 import { BuildingRecordSection } from "./panel/BuildingRecordSection";
 import { ReviewCard } from "./panel/ReviewCard";
@@ -168,9 +168,11 @@ export function BuildingPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sort]);
 
-  const streetViewSrc =
-    streetViewUrlFromStored(detail?.street_view_url ?? complex.street_view_url) ??
-    streetViewProxyUrl(complex.lat, complex.lng);
+  const mapEmbedSrc = panelMapEmbedUrl(
+    detail?.street_view_url ?? complex.street_view_url,
+    complex.lat,
+    complex.lng
+  );
 
   const hpdScore = detail?.hpd_violation_score;
   const hpdOpen = detail?.hpd_open_violations ?? 0;
@@ -224,25 +226,26 @@ export function BuildingPanel({
       aria-label={`Building details for ${complex.name}`}
     >
       <div className="relative h-[200px] w-full shrink-0 overflow-hidden bg-neutral-900">
-        {streetViewSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={streetViewSrc}
-            alt={`Street view of ${complex.name}`}
-            className="h-full w-full object-cover"
+        {mapEmbedSrc ? (
+          <iframe
+            title={`Map of ${complex.name}`}
+            src={mapEmbedSrc}
+            className="h-full w-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
           />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-neutral-600">
             <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
-            <span className="text-xs">No street view</span>
+            <span className="text-xs">No map location</span>
           </div>
         )}
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-full bg-neutral-950/80 px-2.5 py-1 text-xs text-neutral-300 backdrop-blur hover:text-white"
+          className="absolute right-3 top-3 z-10 rounded-full bg-neutral-950/80 px-2.5 py-1 text-xs text-neutral-300 backdrop-blur hover:text-white"
         >
           ✕
         </button>

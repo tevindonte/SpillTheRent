@@ -2,25 +2,32 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MapContainer, TileLayer, ZoomControl, useMap } from "react-leaflet";
-import type { LatLngBounds } from "leaflet";
+import Map, {
+  NavigationControl,
+  type MapRef,
+} from "react-map-gl/maplibre";
+import "@/lib/maplibre-worker";
 import type { Complex, MapFilters } from "@/lib/complexes";
 import {
-  DEFAULT_MAP_CENTER,
+  DEFAULT_MAP_CENTER_LNG_LAT,
   DEFAULT_MAP_ZOOM,
+  getMapLibreStyleUrl,
   MANHATTAN_CENTER,
-  MAP_TILE_ATTRIBUTION,
-  MAP_TILE_URL,
 } from "@/lib/map";
-import { BoroughFlyTo } from "./BoroughFlyTo";
+import {
+  BOUNDS_DEBOUNCE_MS,
+  MARKER_ZOOM_THRESHOLD,
+  mapLibreBoundsToBoundsLike,
+} from "@/lib/map-bounds";
+import { BOROUGH_FLY_TO, type BoroughArea } from "@/lib/map-boroughs";
 import { useViewportComplexes } from "@/hooks/useViewportComplexes";
 import { useViewportStats } from "@/hooks/useViewportStats";
 import { AddBuildingModal } from "./AddBuildingModal";
 import { BuildingPanel } from "./BuildingPanel";
 import { BottomStatusBar } from "./BottomStatusBar";
-import { DebouncedBoundsTracker } from "./DebouncedBoundsTracker";
 import { MapFilterPanel } from "./MapFilterPanel";
-import { MapMarkers } from "./MapMarkers";
+import { MapLibreMarkers } from "./MapLibreMarkers";
+import { MapLibreMvtLayer } from "./MapLibreMvtLayer";
 import { RentModal } from "./RentModal";
 import { ReviewModal } from "./ReviewModal";
 import { MapSearchBar } from "./MapSearchBar";
@@ -36,19 +43,6 @@ import {
   parseCompareParam,
 } from "@/lib/compare-url";
 import { GeoTeaPrompt } from "./GeoTeaPrompt";
-
-function FlyToComplex({ complex }: { complex: Complex | null }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!complex) return;
-    map.flyTo([complex.lat, complex.lng], Math.max(map.getZoom(), 15), {
-      duration: 0.45,
-    });
-  }, [complex, map]);
-
-  return null;
-}
 
 function detailToComplex(data: Record<string, unknown>): Complex {
   return {
@@ -74,15 +68,29 @@ function detailToComplex(data: Record<string, unknown>): Complex {
 export default function MapView() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const mapRef = useRef<MapRef>(null);
   const deepLinkHandled = useRef<string | null>(null);
   const compareLinkHandled = useRef<string | null>(null);
+  const boundsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevBoroughRef = useRef<BoroughArea | undefined>(undefined);
+  const lastSelectedFlyRef = useRef<string | null>(null);
+
   const [filters, setFilters] = useState<MapFilters>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [panelRefreshKey, setPanelRefreshKey] = useState(0);
+  const [viewZoom, setViewZoom] = useState(DEFAULT_MAP_ZOOM);
+  const [viewBounds, setViewBounds] = useState<{
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+  } | null>(null);
+  const [statusComplexes, setStatusComplexes] = useState<Complex[]>([]);
 
-  const { complexes, loading, error, zoom, loadForBounds, noteBoundsDebounced } =
+  const { complexes, loading, error, loadForBounds } =
     useViewportComplexes(filters);
-  const { medianRent, fetchStats } = useViewportStats(filters);
+  const { medianRent, buildingCount, avgRating, totalReviews, fetchStats } =
+    useViewportStats(filters);
 
   const [selectedComplex, setSelectedComplex] = useState<Complex | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -92,6 +100,11 @@ export default function MapView() {
   const [compareCount, setCompareCount] = useState(0);
   const [reviewComplex, setReviewComplex] = useState<Complex | null>(null);
   const [rentComplex, setRentComplex] = useState<Complex | null>(null);
+
+  // Keep last known buildings for status bar while MVT mode clears complexes.
+  useEffect(() => {
+    if (complexes.length > 0) setStatusComplexes(complexes);
+  }, [complexes]);
 
   const syncCompareToUrl = useCallback(
     (entries: CompareEntry[]) => {
@@ -151,13 +164,49 @@ export default function MapView() {
     });
   }, [searchParams, refreshCompareCount]);
 
-  const handleViewportChange = useCallback(
-    (bounds: LatLngBounds, nextZoom: number) => {
-      noteBoundsDebounced();
-      loadForBounds(bounds, nextZoom);
-      fetchStats(bounds);
+  const emitViewport = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const b = map.getBounds();
+    const nextZoom = map.getZoom();
+    const adapter = mapLibreBoundsToBoundsLike(b);
+    setViewZoom(nextZoom);
+    setViewBounds({
+      west: b.getWest(),
+      south: b.getSouth(),
+      east: b.getEast(),
+      north: b.getNorth(),
+    });
+    // Stats: one cheap RPC at all zooms. Markers: only zoom >= 14.
+    fetchStats(adapter);
+    void loadForBounds(adapter, nextZoom);
+  }, [fetchStats, loadForBounds]);
+
+  const scheduleViewport = useCallback(() => {
+    if (boundsTimerRef.current) clearTimeout(boundsTimerRef.current);
+    boundsTimerRef.current = setTimeout(emitViewport, BOUNDS_DEBOUNCE_MS);
+  }, [emitViewport]);
+
+  useEffect(() => {
+    return () => {
+      if (boundsTimerRef.current) clearTimeout(boundsTimerRef.current);
+    };
+  }, []);
+
+  const handleMoveEnd = useCallback(() => {
+    scheduleViewport();
+  }, [scheduleViewport]);
+
+  const flyToLngLat = useCallback(
+    (lng: number, lat: number, zoom = 15, duration = 800) => {
+      mapRef.current?.flyTo({
+        center: [lng, lat],
+        zoom,
+        duration,
+        essential: true,
+      });
     },
-    [loadForBounds, fetchStats, noteBoundsDebounced]
+    []
   );
 
   const handleSelectComplex = useCallback(
@@ -167,6 +216,44 @@ export default function MapView() {
     },
     [router]
   );
+
+  const handleMvtBuildingId = useCallback(
+    (id: string) => {
+      fetch(`/api/complexes/${id}/detail`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) handleSelectComplex(detailToComplex(data));
+        })
+        .catch(() => {});
+    },
+    [handleSelectComplex]
+  );
+
+  // Fly to selected building (search, deep link, marker click).
+  useEffect(() => {
+    if (!selectedComplex) {
+      lastSelectedFlyRef.current = null;
+      return;
+    }
+    if (lastSelectedFlyRef.current === selectedComplex.id) return;
+    lastSelectedFlyRef.current = selectedComplex.id;
+    const z = Math.max(mapRef.current?.getZoom() ?? 15, 15);
+    flyToLngLat(selectedComplex.lng, selectedComplex.lat, z, 800);
+  }, [selectedComplex, flyToLngLat]);
+
+  // Borough filter fly-to (Leaflet used [lat,lng]; MapLibre needs [lng,lat]).
+  useEffect(() => {
+    const area = filters.boroughArea;
+    if (!area || area === "all") {
+      prevBoroughRef.current = area;
+      return;
+    }
+    if (prevBoroughRef.current === area) return;
+    prevBoroughRef.current = area;
+    const { center, zoom } = BOROUGH_FLY_TO[area];
+    // BOROUGH_FLY_TO stores [lat, lng]
+    flyToLngLat(center[1], center[0], zoom, 550);
+  }, [filters.boroughArea, flyToLngLat]);
 
   const handleClosePanel = useCallback(() => {
     setSelectedComplex(null);
@@ -254,27 +341,44 @@ export default function MapView() {
     (filters.hasHpdViolations ? 1 : 0) +
     (filters.minGoogleRating && filters.minGoogleRating > 0 ? 1 : 0);
 
+  const statusBarComplexes =
+    viewZoom >= MARKER_ZOOM_THRESHOLD ? complexes : statusComplexes;
+
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#0a0a0a]">
-      <MapContainer
-        center={DEFAULT_MAP_CENTER}
-        zoom={DEFAULT_MAP_ZOOM}
-        className="h-full w-full z-0"
-        preferCanvas
-        zoomControl={false}
+      <Map
+        ref={mapRef}
+        mapStyle={getMapLibreStyleUrl()}
+        initialViewState={{
+          longitude: DEFAULT_MAP_CENTER_LNG_LAT[0],
+          latitude: DEFAULT_MAP_CENTER_LNG_LAT[1],
+          zoom: DEFAULT_MAP_ZOOM,
+        }}
+        style={{ width: "100%", height: "100%" }}
+        attributionControl={{ compact: true }}
+        onLoad={emitViewport}
+        onMoveEnd={handleMoveEnd}
+        interactiveLayerIds={
+          viewZoom < MARKER_ZOOM_THRESHOLD ? ["buildings-dots"] : []
+        }
       >
-        <ZoomControl position="bottomleft" />
-        <TileLayer url={MAP_TILE_URL} attribution={MAP_TILE_ATTRIBUTION} />
-        <DebouncedBoundsTracker onViewportChange={handleViewportChange} />
-        <BoroughFlyTo boroughArea={filters.boroughArea} />
-        <FlyToComplex complex={selectedComplex} />
-        <MapMarkers
+        <NavigationControl position="bottom-left" showCompass={false} />
+        <MapLibreMvtLayer
+          filters={filters}
+          zoom={viewZoom}
+          onBuildingId={handleMvtBuildingId}
+        />
+        <MapLibreMarkers
           complexes={complexes}
-          zoom={zoom}
+          zoom={viewZoom}
+          bounds={viewBounds}
           selectedId={selectedComplex?.id ?? null}
           onSelect={handleSelectComplex}
+          onClusterClick={(lng, lat, expansionZoom) =>
+            flyToLngLat(lng, lat, expansionZoom, 500)
+          }
         />
-      </MapContainer>
+      </Map>
 
       <div className="pointer-events-none absolute inset-0 z-[1000] flex flex-col p-4 pb-16">
         <div className="pointer-events-auto flex gap-2">
@@ -359,7 +463,11 @@ export default function MapView() {
       )}
 
       <BottomStatusBar
-        complexes={complexes}
+        complexes={statusBarComplexes}
+        zoom={viewZoom}
+        buildingCount={buildingCount}
+        avgRating={avgRating}
+        totalReviews={totalReviews}
         medianRent={medianRent}
         boroughArea={filters.boroughArea}
       />

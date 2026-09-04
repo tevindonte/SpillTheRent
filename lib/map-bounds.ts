@@ -6,6 +6,28 @@ export type MapBounds = {
   east: number;
 };
 
+/** Leaflet-compatible bounds shape for MapLibre adapters. */
+export type BoundsLike = {
+  getSouthWest: () => { lat: number; lng: number };
+  getNorthEast: () => { lat: number; lng: number };
+};
+
+export function mapLibreBoundsToBoundsLike(bounds: {
+  getSouth: () => number;
+  getWest: () => number;
+  getNorth: () => number;
+  getEast: () => number;
+}): BoundsLike {
+  const south = bounds.getSouth();
+  const west = bounds.getWest();
+  const north = bounds.getNorth();
+  const east = bounds.getEast();
+  return {
+    getSouthWest: () => ({ lat: south, lng: west }),
+    getNorthEast: () => ({ lat: north, lng: east }),
+  };
+}
+
 /** ~1.3 km tiles at Manhattan latitude — balances cache hits vs query size. */
 export const MAP_TILE_SIZE = 0.012;
 
@@ -26,9 +48,7 @@ export function expandBounds(
   };
 }
 
-export function latLngBoundsToMapBounds(
-  bounds: { getSouthWest: () => { lat: number; lng: number }; getNorthEast: () => { lat: number; lng: number } }
-): MapBounds {
+export function latLngBoundsToMapBounds(bounds: BoundsLike): MapBounds {
   const sw = bounds.getSouthWest();
   const ne = bounds.getNorthEast();
   return {

@@ -11,10 +11,13 @@ type AddBuildingModalProps = {
   onCreated: (complexId: string, name: string) => void;
 };
 
-type GoogleCandidate = {
-  placeId: string;
+type GeocodeCandidate = {
   name: string;
   address: string;
+  street?: string | null;
+  city?: string | null;
+  zip?: string | null;
+  borough?: string | null;
   lat?: number;
   lng?: number;
 };
@@ -28,7 +31,7 @@ export function AddBuildingModal({
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [googleCandidate, setGoogleCandidate] = useState<GoogleCandidate | null>(null);
+  const [candidate, setCandidate] = useState<GeocodeCandidate | null>(null);
   const [manualMode, setManualMode] = useState(false);
   const [buildingName, setBuildingName] = useState("");
   const [unitCount, setUnitCount] = useState<UnitCountOption | "">("");
@@ -36,7 +39,7 @@ export function AddBuildingModal({
   function reset() {
     setAddress("");
     setError(null);
-    setGoogleCandidate(null);
+    setCandidate(null);
     setManualMode(false);
     setBuildingName("");
     setUnitCount("");
@@ -51,7 +54,7 @@ export function AddBuildingModal({
     e.preventDefault();
     setError(null);
     setLoading(true);
-    setGoogleCandidate(null);
+    setCandidate(null);
     setManualMode(false);
     try {
       const res = await fetch("/api/buildings/lookup", {
@@ -69,8 +72,8 @@ export function AddBuildingModal({
         onExisting(data.complex as Complex);
         return;
       }
-      if (data.status === "google" && data.candidate) {
-        setGoogleCandidate(data.candidate);
+      if (data.status === "geocode" && data.candidate) {
+        setCandidate(data.candidate);
         return;
       }
       setManualMode(true);
@@ -81,15 +84,15 @@ export function AddBuildingModal({
     }
   }
 
-  async function confirmGoogle() {
-    if (!googleCandidate) return;
+  async function confirmGeocode() {
+    if (!candidate) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/buildings/add", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode: "google", ...googleCandidate }),
+        body: JSON.stringify({ mode: "geocode", ...candidate }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -97,7 +100,7 @@ export function AddBuildingModal({
         return;
       }
       handleClose();
-      onCreated(data.complexId, googleCandidate.name);
+      onCreated(data.complexId, candidate.name);
     } catch {
       setError("Network error");
     } finally {
@@ -155,16 +158,19 @@ export function AddBuildingModal({
           </button>
         </div>
 
-        {googleCandidate ? (
+        {candidate ? (
           <div className="space-y-4">
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
-              <p className="font-medium text-neutral-100">{googleCandidate.name}</p>
-              <p className="mt-1 text-sm text-neutral-500">{googleCandidate.address}</p>
+              <p className="font-medium text-neutral-100">{candidate.name}</p>
+              <p className="mt-1 text-sm text-neutral-500">{candidate.address}</p>
+              <p className="mt-2 text-xs text-neutral-600">
+                You can suggest a building name later from the building panel.
+              </p>
             </div>
             {error && <p className="text-sm text-red-400">{error}</p>}
             <button
               type="button"
-              onClick={confirmGoogle}
+              onClick={confirmGeocode}
               disabled={loading}
               className="w-full rounded-full bg-orange-500 py-3 text-sm font-semibold text-neutral-950 hover:bg-orange-400"
             >
@@ -174,7 +180,7 @@ export function AddBuildingModal({
         ) : manualMode ? (
           <form onSubmit={submitManual} className="space-y-4">
             <p className="text-sm text-neutral-500">
-              Google couldn&apos;t find this address. Add it manually.
+              We couldn&apos;t geocode this address. Add it manually.
             </p>
             <input
               value={address}
@@ -213,7 +219,7 @@ export function AddBuildingModal({
             <input
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Street address in Manhattan"
+              placeholder="Street address in NYC"
               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-100 outline-none focus:border-orange-500/50"
             />
             {error && <p className="text-sm text-red-400">{error}</p>}

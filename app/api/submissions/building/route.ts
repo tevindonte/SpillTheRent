@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findPlaceFromText, isResidentialPlace } from "@/lib/google/places";
+import {
+  isNycAddress,
+  nominatimToBuilding,
+  searchNominatim,
+} from "@/lib/nominatim";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UNIT_COUNT_OPTIONS, type UnitCountOption } from "@/lib/submissions/constants";
 
@@ -25,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   if (typeof address !== "string" || address.trim().length < 5) {
     return NextResponse.json(
-      { error: "Enter a valid Manhattan address" },
+      { error: "Enter a valid NYC address" },
       { status: 400 }
     );
   }
@@ -36,34 +40,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const query = `${address.trim()} Manhattan New York`;
-  const { candidate, error: googleError } = await findPlaceFromText(query);
+  const { result, error: geoError } = await searchNominatim(address.trim());
 
-  if (googleError) {
-    return NextResponse.json({ error: googleError }, { status: 502 });
+  if (geoError) {
+    return NextResponse.json({ error: geoError }, { status: 502 });
   }
-  if (!candidate?.place_id) {
+  if (!result) {
     return NextResponse.json(
-      {
-        error:
-          "We couldn't find that address on Google Maps. Check the spelling and try again.",
-      },
+      { error: "Address not found, please check and try again" },
+      { status: 422 }
+    );
+  }
+  if (!isNycAddress(result.address)) {
+    return NextResponse.json(
+      { error: "Only NYC addresses supported right now" },
       { status: 422 }
     );
   }
 
-  if (!isResidentialPlace(candidate.types)) {
+  const building = nominatimToBuilding(result, address.trim());
+  if (!Number.isFinite(building.lat) || !Number.isFinite(building.lng)) {
     return NextResponse.json(
-      {
-        error:
-          "This doesn't look like a residential building. Please submit an apartment or condo address.",
-      },
+      { error: "Address not found, please check and try again" },
       { status: 422 }
     );
   }
 
-  const formatted = candidate.formatted_address ?? address.trim();
-  const displayName = candidate.name?.trim() || formatted;
+  const formatted = building.address;
+  const displayName = building.name;
   const normalized = normalizeAddress(formatted);
 
   const supabase = createAdminClient();
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
   const { data: existing } = await supabase
     .from("complexes")
     .select("id")
-    .ilike("address", normalized)
+    .ilike("address", `%${normalized.slice(0, 40)}%`)
     .limit(1);
 
   if (existing?.length) {
@@ -81,21 +85,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const lat = candidate.geometry?.location?.lat;
-  const lng = candidate.geometry?.location?.lng;
   const insertRow: Record<string, unknown> = {
     name: displayName,
     address: formatted,
-    borough: "Manhattan",
+    borough: building.borough ?? "Manhattan",
+    zip: building.zip,
     units: unitsFromOption(unitCount as UnitCountOption),
     verified: false,
-    google_place_id: candidate.place_id,
+    google_place_id: null,
     portal_type: "unknown",
+    coordinates: `SRID=4326;POINT(${building.lng} ${building.lat})`,
   };
-
-  if (lat != null && lng != null) {
-    insertRow.coordinates = `SRID=4326;POINT(${lng} ${lat})`;
-  }
 
   const { data: created, error: insertError } = await supabase
     .from("complexes")

@@ -1,5 +1,3 @@
-import L from "leaflet";
-
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -8,20 +6,16 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export function createRentPillIcon(
+/** HTML for MapLibre Marker rent pills (reuses globals.css classes). */
+export function rentPillHtml(
   label: string,
   selected: boolean,
   signalHigh = false
-): L.DivIcon {
+): string {
   const safe = escapeHtml(label);
   const selectedClass = selected ? " rent-pill-marker__label--selected" : "";
   const signalDot = signalHigh
     ? `<span class="rent-pill-marker__signal" aria-hidden="true"></span>`
     : "";
-  return L.divIcon({
-    className: "rent-pill-marker",
-    html: `${signalDot}<span class="rent-pill-marker__label${selectedClass}">${safe}</span>`,
-    iconSize: [0, 0],
-    iconAnchor: [0, 0],
-  });
+  return `${signalDot}<span class="rent-pill-marker__label${selectedClass}">${safe}</span>`;
 }

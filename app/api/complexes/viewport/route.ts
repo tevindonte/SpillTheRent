@@ -10,6 +10,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const PAGE_SIZE = 1000;
 const ID_CHUNK = 150;
 
+type ViewportRow = {
+  id: string;
+  google_rating: number | null;
+  google_review_count: number | null;
+  cached_review_count: number | null;
+  review_count: number | null;
+};
+
 function parseBounds(searchParams: URLSearchParams) {
   const south = parseFloat(searchParams.get("south") ?? "");
   const north = parseFloat(searchParams.get("north") ?? "");
@@ -48,18 +56,29 @@ function parseFilters(searchParams: URLSearchParams): MapFilters {
   };
 }
 
-async function complexIdsInBounds(
+function reviewBacked(row: ViewportRow): number {
+  return (
+    row.cached_review_count ??
+    row.google_review_count ??
+    row.review_count ??
+    0
+  );
+}
+
+async function rowsInBounds(
   bounds: { south: number; north: number; west: number; east: number },
   filters: MapFilters
-): Promise<string[]> {
+): Promise<ViewportRow[]> {
   const supabase = createAdminClient();
-  const ids: string[] = [];
+  const rows: ViewportRow[] = [];
   let offset = 0;
 
   while (true) {
     let query = supabase
       .from("complexes_map_summary")
-      .select("id")
+      .select(
+        "id, google_rating, google_review_count, cached_review_count, review_count"
+      )
       .gte("lat", bounds.south)
       .lte("lat", bounds.north)
       .gte("lng", bounds.west)
@@ -73,15 +92,49 @@ async function complexIdsInBounds(
     }
 
     const { data, error } = await query.range(offset, offset + PAGE_SIZE - 1);
-    if (error) throw error;
+    if (error) {
+      // Older views may lack cached_review_count — fall back.
+      if (
+        error.code === "42703" ||
+        error.message?.toLowerCase().includes("cached_review_count")
+      ) {
+        let legacy = supabase
+          .from("complexes_map_summary")
+          .select("id, google_rating, google_review_count, review_count")
+          .gte("lat", bounds.south)
+          .lte("lat", bounds.north)
+          .gte("lng", bounds.west)
+          .lte("lng", bounds.east);
+        legacy = applyBoroughAreaFilter(legacy, filters.boroughArea);
+        const { data: legacyData, error: legacyError } = await legacy.range(
+          offset,
+          offset + PAGE_SIZE - 1
+        );
+        if (legacyError) throw legacyError;
+        if (!legacyData?.length) break;
+        rows.push(
+          ...legacyData.map((r) => ({
+            id: r.id as string,
+            google_rating: r.google_rating as number | null,
+            google_review_count: r.google_review_count as number | null,
+            cached_review_count: null,
+            review_count: r.review_count as number | null,
+          }))
+        );
+        if (legacyData.length < PAGE_SIZE) break;
+        offset += PAGE_SIZE;
+        continue;
+      }
+      throw error;
+    }
     if (!data?.length) break;
 
-    ids.push(...data.map((row) => row.id));
+    rows.push(...(data as ViewportRow[]));
     if (data.length < PAGE_SIZE) break;
     offset += PAGE_SIZE;
   }
 
-  return ids;
+  return rows;
 }
 
 async function rentsForComplexIds(complexIds: string[]): Promise<number[]> {
@@ -118,13 +171,34 @@ export async function GET(request: NextRequest) {
 
   try {
     const filters = parseFilters(request.nextUrl.searchParams);
-    const complexIds = await complexIdsInBounds(bounds, filters);
+    const rows = await rowsInBounds(bounds, filters);
+    const complexIds = rows.map((r) => r.id);
     const rents = await rentsForComplexIds(complexIds);
     const median_rent = median(rents);
 
-    return NextResponse.json({ median_rent });
+    const rated: number[] = [];
+    let total_reviews = 0;
+    for (const row of rows) {
+      const reviews = reviewBacked(row);
+      total_reviews += reviews;
+      if (reviews > 0 && row.google_rating != null) {
+        rated.push(row.google_rating);
+      }
+    }
+    const avg_rating =
+      rated.length > 0
+        ? rated.reduce((a, b) => a + b, 0) / rated.length
+        : null;
+
+    return NextResponse.json({
+      median_rent,
+      building_count: rows.length,
+      avg_rating: total_reviews > 0 ? avg_rating : null,
+      total_reviews,
+    });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Failed to load viewport stats";
+    const message =
+      e instanceof Error ? e.message : "Failed to load viewport stats";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

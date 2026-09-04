@@ -1,6 +1,6 @@
 import type { MapFilters } from "@/lib/complexes";
 
-/** Leaflet vector tile URL template for complexes MVT layer. */
+/** MapLibre / Leaflet vector tile URL template for complexes MVT layer. */
 export function buildMvtTileUrl(filters: MapFilters = {}): string {
   const params = new URLSearchParams();
   if (filters.boroughArea) params.set("boroughArea", filters.boroughArea);

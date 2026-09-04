@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findPlaceFromText, isResidentialPlace } from "@/lib/google/places";
 import { parseCoordinates } from "@/lib/complexes";
+import {
+  isNycAddress,
+  nominatimToBuilding,
+  searchNominatim,
+} from "@/lib/nominatim";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
@@ -50,28 +54,45 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const googleQuery = `${query} Manhattan New York`;
-  const { candidate, error: googleError } = await findPlaceFromText(googleQuery);
+  const { result, error: geoError } = await searchNominatim(query);
 
-  if (googleError) {
-    return NextResponse.json({ error: googleError }, { status: 502 });
+  if (geoError) {
+    return NextResponse.json({ error: geoError }, { status: 502 });
   }
 
-  if (candidate?.place_id && isResidentialPlace(candidate.types)) {
-    return NextResponse.json({
-      status: "google",
-      candidate: {
-        placeId: candidate.place_id,
-        name: candidate.name ?? candidate.formatted_address ?? query,
-        address: candidate.formatted_address ?? query,
-        lat: candidate.geometry?.location?.lat,
-        lng: candidate.geometry?.location?.lng,
-      },
-    });
+  if (!result) {
+    return NextResponse.json(
+      { error: "Address not found, please check and try again" },
+      { status: 404 }
+    );
+  }
+
+  if (!isNycAddress(result.address)) {
+    return NextResponse.json(
+      { error: "Only NYC addresses supported right now" },
+      { status: 422 }
+    );
+  }
+
+  const building = nominatimToBuilding(result, query);
+  if (!Number.isFinite(building.lat) || !Number.isFinite(building.lng)) {
+    return NextResponse.json(
+      { error: "Address not found, please check and try again" },
+      { status: 404 }
+    );
   }
 
   return NextResponse.json({
-    status: "manual",
-    address: query,
+    status: "geocode",
+    candidate: {
+      name: building.name,
+      address: building.address,
+      street: building.street,
+      city: building.city,
+      zip: building.zip,
+      borough: building.borough,
+      lat: building.lat,
+      lng: building.lng,
+    },
   });
 }

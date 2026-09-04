@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { LatLngBounds } from "leaflet";
 import { fetchComplexesInBounds, type Complex, type MapFilters } from "@/lib/complexes";
 import {
   expandBounds,
@@ -9,7 +8,9 @@ import {
   hasValidMapCoordinates,
   isInBounds,
   latLngBoundsToMapBounds,
+  MARKER_ZOOM_THRESHOLD,
   tileToBounds,
+  type BoundsLike,
   type MapBounds,
 } from "@/lib/map-bounds";
 
@@ -25,7 +26,7 @@ export function useViewportComplexes(filters: MapFilters = {}) {
   const pendingTilesRef = useRef<Set<string>>(new Set());
   const requestIdRef = useRef(0);
   const filtersRef = useRef(filters);
-  const lastBoundsRef = useRef<{ bounds: LatLngBounds; zoom: number } | null>(
+  const lastBoundsRef = useRef<{ bounds: BoundsLike; zoom: number } | null>(
     null
   );
 
@@ -66,10 +67,18 @@ export function useViewportComplexes(filters: MapFilters = {}) {
   }, []);
 
   const loadForBounds = useCallback(
-    async (bounds: LatLngBounds, nextZoom: number) => {
+    async (bounds: BoundsLike, nextZoom: number) => {
       lastBoundsRef.current = { bounds, zoom: nextZoom };
       const requestId = ++requestIdRef.current;
       setZoom(nextZoom);
+
+      // Low zoom: MVT layer draws buildings; skip PostgREST tile storm.
+      if (nextZoom < MARKER_ZOOM_THRESHOLD) {
+        setComplexes([]);
+        setLoading(false);
+        setError(null);
+        return;
+      }
 
       const viewport = latLngBoundsToMapBounds(bounds);
       const fetchBounds = expandBounds(viewport);
