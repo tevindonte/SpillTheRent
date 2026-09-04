@@ -47,7 +47,7 @@ export function AboutPage() {
       <div>
         <h1 className="text-2xl font-semibold text-neutral-50">About</h1>
         <p className="mt-1 text-sm text-neutral-500">
-          The tea app for apartments — built for renters, not landlords.{" "}
+          The tea app for apartments, built for renters, not landlords.{" "}
           <a href="#faq" className="text-orange-400/90 hover:text-orange-400">
             Jump to FAQ
           </a>
@@ -61,9 +61,9 @@ export function AboutPage() {
           so you can see the full picture before you sign a lease.
         </p>
         <p>
-          We combine tenant reviews with public data — HPD violations, bedbug
+          We combine tenant reviews with public data (HPD violations, bedbug
           filings, court cases, construction permits, and rent-stabilization
-          records — in one place. No sugar coating, no broker spin.
+          records) in one place. No sugar coating, no broker spin.
         </p>
         <p className="text-neutral-500">
           Use <strong className="text-neutral-400">The Receipt</strong> to
@@ -102,7 +102,7 @@ export function AboutPage() {
 
         {status === "success" ? (
           <p className="mt-4 rounded-lg border border-emerald-900/50 bg-emerald-950/30 px-3 py-2 text-sm text-emerald-300">
-            Thanks — we got your message and will get back to you soon.
+            Thanks. We got your message and will get back to you soon.
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="mt-4 space-y-4">

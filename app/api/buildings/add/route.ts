@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
     if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
       return NextResponse.json(
-        { error: "Missing coordinates — look up the address again" },
+        { error: "Missing coordinates. Look up the address again" },
         { status: 400 }
       );
     }

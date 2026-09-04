@@ -24,7 +24,7 @@ export function RapSheetShareRow({ detail, onToast }: RapSheetShareRowProps) {
       onToast(
         result === "shared"
           ? "Rap Sheet shared!"
-          : "Rap Sheet downloaded — post it anywhere renters need the tea."
+          : "Rap Sheet downloaded. Post it anywhere renters need the tea."
       );
     } catch {
       onToast("Could not generate Rap Sheet. Try again.");

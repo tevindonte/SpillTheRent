@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Map, {
   NavigationControl,
@@ -43,6 +43,17 @@ import {
   parseCompareParam,
 } from "@/lib/compare-url";
 import { GeoTeaPrompt } from "./GeoTeaPrompt";
+import { NeighborhoodRentBanner } from "./NeighborhoodRentBanner";
+import { ReportRentPrompt } from "./ReportRentPrompt";
+import { MapModeToggle } from "./MapModeToggle";
+import { MapColorLegend } from "./MapColorLegend";
+import { RentModeSparseBanner } from "./RentModeSparseBanner";
+import {
+  loadMapColorMode,
+  saveMapColorMode,
+  type MapColorMode,
+} from "@/lib/map-color-mode";
+import { mapBuildingRent } from "@/lib/map-marker-style";
 
 function detailToComplex(data: Record<string, unknown>): Complex {
   return {
@@ -95,11 +106,24 @@ export default function MapView() {
   const [selectedComplex, setSelectedComplex] = useState<Complex | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [rentOpen, setRentOpen] = useState(false);
+  const [rentPreferSearch, setRentPreferSearch] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
   const [compareCount, setCompareCount] = useState(0);
   const [reviewComplex, setReviewComplex] = useState<Complex | null>(null);
   const [rentComplex, setRentComplex] = useState<Complex | null>(null);
+  const [hoodBanner, setHoodBanner] = useState<{
+    neighborhood: string | null;
+    medianRent: number | null;
+    reportCount: number;
+  }>({ neighborhood: null, medianRent: null, reportCount: 0 });
+  const hoodRequestRef = useRef(0);
+  const [colorMode, setColorMode] = useState<MapColorMode>("rating");
+  const neighborhoodMediansRef = useRef<Record<string, number>>({});
+  const [neighborhoodMedians, setNeighborhoodMedians] = useState<
+    Record<string, number>
+  >({});
+  const [rentSparseDismissed, setRentSparseDismissed] = useState(false);
 
   // Keep last known buildings for status bar while MVT mode clears complexes.
   useEffect(() => {
@@ -126,6 +150,25 @@ export default function MapView() {
     refreshCompareCount();
     syncCompareToUrl(list);
   }, [refreshCompareCount, syncCompareToUrl]);
+
+  useEffect(() => {
+    setColorMode(loadMapColorMode());
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/neighborhoods/rent-medians")
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: Record<string, number>) => {
+        if (cancelled || !data || typeof data !== "object") return;
+        neighborhoodMediansRef.current = data;
+        setNeighborhoodMedians(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     refreshCompareCount();
@@ -180,6 +223,48 @@ export default function MapView() {
     // Stats: one cheap RPC at all zooms. Markers: only zoom >= 14.
     fetchStats(adapter);
     void loadForBounds(adapter, nextZoom);
+
+    if (nextZoom < 13) {
+      setHoodBanner({ neighborhood: null, medianRent: null, reportCount: 0 });
+    } else {
+      const center = map.getCenter();
+      const requestId = ++hoodRequestRef.current;
+      const params = new URLSearchParams({
+        south: String(b.getSouth()),
+        north: String(b.getNorth()),
+        west: String(b.getWest()),
+        east: String(b.getEast()),
+        lat: String(center.lat),
+        lng: String(center.lng),
+        zoom: String(nextZoom),
+      });
+      void fetch(`/api/complexes/neighborhood-rent?${params}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data || hoodRequestRef.current !== requestId) return;
+          setHoodBanner({
+            neighborhood:
+              typeof data.neighborhood === "string" ? data.neighborhood : null,
+            medianRent:
+              data.median_rent != null && Number.isFinite(data.median_rent)
+                ? Number(data.median_rent)
+                : null,
+            reportCount:
+              data.report_count != null && Number.isFinite(data.report_count)
+                ? Number(data.report_count)
+                : 0,
+          });
+        })
+        .catch(() => {
+          if (hoodRequestRef.current === requestId) {
+            setHoodBanner({
+              neighborhood: null,
+              medianRent: null,
+              reportCount: 0,
+            });
+          }
+        });
+    }
   }, [fetchStats, loadForBounds]);
 
   const scheduleViewport = useCallback(() => {
@@ -266,9 +351,40 @@ export default function MapView() {
   }, []);
 
   const openRent = useCallback((complex: Complex) => {
+    setRentPreferSearch(false);
     setRentComplex(complex);
     setRentOpen(true);
   }, []);
+
+  const openRentFromPrompt = useCallback(() => {
+    setRentPreferSearch(true);
+    setRentComplex(null);
+    setRentOpen(true);
+  }, []);
+
+  const handleColorModeChange = useCallback((mode: MapColorMode) => {
+    setColorMode(mode);
+    saveMapColorMode(mode);
+    if (mode === "rent") setRentSparseDismissed(false);
+  }, []);
+
+  const statusBarComplexes =
+    viewZoom >= MARKER_ZOOM_THRESHOLD ? complexes : statusComplexes;
+
+  const rentSparseVisible = useMemo(() => {
+    if (colorMode !== "rent" || rentSparseDismissed) return false;
+    const pool =
+      viewZoom >= MARKER_ZOOM_THRESHOLD ? complexes : statusComplexes;
+    if (pool.length < 5) return false;
+    const withRent = pool.filter((c) => mapBuildingRent(c) != null).length;
+    return withRent / pool.length < 0.35;
+  }, [
+    colorMode,
+    rentSparseDismissed,
+    viewZoom,
+    complexes,
+    statusComplexes,
+  ]);
 
   const bumpPanelRefresh = useCallback(() => {
     setPanelRefreshKey((k) => k + 1);
@@ -341,9 +457,6 @@ export default function MapView() {
     (filters.hasHpdViolations ? 1 : 0) +
     (filters.minGoogleRating && filters.minGoogleRating > 0 ? 1 : 0);
 
-  const statusBarComplexes =
-    viewZoom >= MARKER_ZOOM_THRESHOLD ? complexes : statusComplexes;
-
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#0a0a0a]">
       <Map
@@ -366,6 +479,7 @@ export default function MapView() {
         <MapLibreMvtLayer
           filters={filters}
           zoom={viewZoom}
+          colorMode={colorMode}
           onBuildingId={handleMvtBuildingId}
         />
         <MapLibreMarkers
@@ -373,6 +487,8 @@ export default function MapView() {
           zoom={viewZoom}
           bounds={viewBounds}
           selectedId={selectedComplex?.id ?? null}
+          colorMode={colorMode}
+          neighborhoodMedians={neighborhoodMedians}
           onSelect={handleSelectComplex}
           onClusterClick={(lng, lat, expansionZoom) =>
             flyToLngLat(lng, lat, expansionZoom, 500)
@@ -381,10 +497,11 @@ export default function MapView() {
       </Map>
 
       <div className="pointer-events-none absolute inset-0 z-[1000] flex flex-col p-4 pb-16">
-        <div className="pointer-events-auto flex gap-2">
-          <div className="min-w-0 flex-1">
+        <div className="pointer-events-auto flex flex-wrap gap-2">
+          <div className="min-w-0 flex-1 basis-[min(100%,12rem)] sm:basis-0">
             <MapSearchBar onSelectBuilding={handleSelectComplex} />
           </div>
+          <MapModeToggle mode={colorMode} onChange={handleColorModeChange} />
           <button
             type="button"
             onClick={() => setFiltersOpen(!filtersOpen)}
@@ -422,6 +539,12 @@ export default function MapView() {
             +
           </button>
         </div>
+        {rentSparseVisible && (
+          <RentModeSparseBanner
+            onReport={openRentFromPrompt}
+            onDismiss={() => setRentSparseDismissed(true)}
+          />
+        )}
       </div>
 
       <MapFilterPanel
@@ -462,9 +585,20 @@ export default function MapView() {
         </>
       )}
 
+      <MapColorLegend mode={colorMode} />
+
+      <NeighborhoodRentBanner
+        neighborhood={hoodBanner.neighborhood}
+        medianRent={hoodBanner.medianRent}
+        reportCount={hoodBanner.reportCount}
+      />
+
+      <ReportRentPrompt onReport={openRentFromPrompt} />
+
       <BottomStatusBar
         complexes={statusBarComplexes}
         zoom={viewZoom}
+        colorMode={colorMode}
         buildingCount={buildingCount}
         avgRating={avgRating}
         totalReviews={totalReviews}
@@ -485,9 +619,11 @@ export default function MapView() {
       <RentModal
         open={rentOpen}
         complex={rentComplex}
+        preferSearch={rentPreferSearch}
         onClose={() => {
           setRentOpen(false);
           setRentComplex(null);
+          setRentPreferSearch(false);
         }}
         onSuccess={bumpPanelRefresh}
       />

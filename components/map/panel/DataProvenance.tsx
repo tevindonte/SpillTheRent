@@ -15,7 +15,7 @@ function formatAsOf(iso: string): string {
       year: "numeric",
     });
   } catch {
-    return "—";
+    return "-";
   }
 }
 

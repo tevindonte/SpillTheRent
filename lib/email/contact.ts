@@ -41,7 +41,7 @@ export async function sendContactEmail(payload: ContactPayload): Promise<void> {
       from: { address: from, name: "spillthe.rent" },
       to: [{ email_address: { address: to, name: "spillthe.rent" } }],
       reply_to: [{ address: payload.email, name: payload.name }],
-      subject: `spillthe.rent contact — ${payload.name}`,
+      subject: `spillthe.rent contact: ${payload.name}`,
       htmlbody: `
         <p><strong>From:</strong> ${safeName} &lt;${safeEmail}&gt;</p>
         <p><strong>Message:</strong></p>

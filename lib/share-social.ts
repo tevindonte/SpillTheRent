@@ -25,7 +25,7 @@ export function rapSheetShareText(detail: BuildingDetail): string {
 }
 
 export function twitterShareUrl(detail: BuildingDetail): string {
-  const text = `${rapSheetShareText(detail)} — full rap sheet:`;
+  const text = `${rapSheetShareText(detail)} · full rap sheet:`;
   const url = buildingShareUrl(detail.id);
   const params = new URLSearchParams({
     text,

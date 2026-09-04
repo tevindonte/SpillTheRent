@@ -96,8 +96,8 @@ export function GeoTeaPrompt({ panelOpen, onSelectBuilding }: GeoTeaPromptProps)
       </p>
       <p className="mt-1 text-sm text-neutral-200">
         Looks like you&apos;re near <strong className="text-neutral-50">{hood}</strong>.
-        Rate <strong className="text-neutral-50">{building.name}</strong> in 30 seconds —
-        help the next renter.
+        Rate <strong className="text-neutral-50">{building.name}</strong> in 30 seconds.
+        Help the next renter.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <button

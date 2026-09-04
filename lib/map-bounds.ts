@@ -28,7 +28,7 @@ export function mapLibreBoundsToBoundsLike(bounds: {
   };
 }
 
-/** ~1.3 km tiles at Manhattan latitude — balances cache hits vs query size. */
+/** ~1.3 km tiles at Manhattan latitude. Balances cache hits vs query size. */
 export const MAP_TILE_SIZE = 0.012;
 
 /** Fixed degree buffer around viewport so markers don't pop in late. */

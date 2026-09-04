@@ -117,7 +117,7 @@ export default function LeaderboardPage() {
 
       <p className="mt-10 border-t border-neutral-800 pt-6 text-xs leading-relaxed text-neutral-500">
         Data sourced from NYC Open Data, HPD, and NYC Housing Court public records.
-        spillthe.rent does not editorialize — we display government records as-is.
+        spillthe.rent does not editorialize. We display government records as-is.
       </p>
     </div>
   );

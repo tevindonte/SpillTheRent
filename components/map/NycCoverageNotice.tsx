@@ -23,7 +23,7 @@ export function NycCoverageNotice({
       </p>
       {isVisitor ? (
         <p className="mt-2 text-sm leading-relaxed text-neutral-300">
-          Your device location isn&apos;t in our database yet — we only have
+          Your device location isn&apos;t in our database yet. We only have
           buildings for <strong className="text-neutral-100">Manhattan, Brooklyn
           &amp; Long Island City</strong> right now. The map starts in NYC so you
           can still research places here; we&apos;re not blocking you from
@@ -32,7 +32,7 @@ export function NycCoverageNotice({
       ) : (
         <p className="mt-2 text-sm leading-relaxed text-neutral-300">
           There aren&apos;t any buildings on the map here. Coverage today is NYC
-          only — drag back toward the city or use the button below.
+          only, so drag back toward the city or use the button below.
         </p>
       )}
       <div className="mt-3 flex flex-wrap gap-2">

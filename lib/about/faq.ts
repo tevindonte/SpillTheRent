@@ -7,12 +7,12 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What is spillthe.rent?",
     answer:
-      "spillthe.rent is a free rental research tool built entirely for renters. Search any apartment building in Manhattan, Brooklyn, or Long Island City and get the real picture — tenant reviews, government violation records, bedbug history, landlord portfolios, and real rent prices people actually paid. No sugar coating, no landlord spin.",
+      "spillthe.rent is a free rental research tool built entirely for renters. Search any apartment building in Manhattan, Brooklyn, or Long Island City and get the real picture: tenant reviews, government violation records, bedbug history, landlord portfolios, and real rent prices people actually paid. No sugar coating, no landlord spin.",
   },
   {
     question: "Where does the data come from?",
     answer:
-      "We pull from multiple sources: NYC HPD violation records, the NYC Bedbug Registry, Department of Buildings permits, housing court tenant actions, OATH short-term rental violations, NYC rent stabilization lists, Google Reviews, and direct submissions from real tenants. Everything is sourced from official government databases or verified tenant reports — nothing is fabricated or paid for by landlords.",
+      "We pull from multiple sources: NYC HPD violation records, the NYC Bedbug Registry, Department of Buildings permits, housing court tenant actions, OATH short-term rental violations, NYC rent stabilization lists, Google Reviews, and direct submissions from real tenants. Everything is sourced from official government databases or verified tenant reports. Nothing is fabricated or paid for by landlords.",
   },
   {
     question: "Is this free to use?",
@@ -32,12 +32,12 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "How do I know the reviews are real?",
     answer:
-      "Community reviews come from verified tenant submissions. Google reviews are pulled directly from Google's API. Official data like HPD violations and bedbug reports come straight from NYC government databases — these are public records that cannot be faked or manipulated.",
+      "Community reviews come from verified tenant submissions. Google reviews are pulled directly from Google's API. Official data like HPD violations and bedbug reports come straight from NYC government databases. These are public records that cannot be faked or manipulated.",
   },
   {
     question: "What is an HPD violation?",
     answer:
-      "HPD stands for NYC Housing Preservation and Development. When a building has code violations — things like no heat, mold, pest infestations, or structural issues — HPD records them officially. We pull these records and display them per building so you can see a building's full violation history before you sign a lease.",
+      "HPD stands for NYC Housing Preservation and Development. When a building has code violations (things like no heat, mold, pest infestations, or structural issues), HPD records them officially. We pull these records and display them per building so you can see a building's full violation history before you sign a lease.",
   },
   {
     question: "What does the HPD violation score mean?",
@@ -77,7 +77,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "Why is my building showing no data?",
     answer:
-      "Some buildings, especially smaller ones, may not have Google Business listings, meaning no Google rating is available. If there are no community reviews yet that's just because no tenants have submitted one yet — you could be the first. Official data like HPD violations depends on whether any violations have been filed with the city.",
+      "Some buildings, especially smaller ones, may not have Google Business listings, meaning no Google rating is available. If there are no community reviews yet that's just because no tenants have submitted one yet, so you could be the first. Official data like HPD violations depends on whether any violations have been filed with the city.",
   },
   {
     question: "How often is the data updated?",

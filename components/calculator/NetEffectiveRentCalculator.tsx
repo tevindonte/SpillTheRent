@@ -246,7 +246,7 @@ export function NetEffectiveRentCalculator() {
           </tr>
           <tr>
             <td className="py-2">You save</td>
-            <td className="py-2 text-right">—</td>
+            <td className="py-2 text-right">-</td>
             <td className="py-2 text-right text-emerald-400">
               ${Math.round(result.monthlySavings * 12).toLocaleString()}/yr
             </td>

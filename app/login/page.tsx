@@ -80,7 +80,7 @@ function LoginForm() {
         </h1>
         <p className="mt-2 text-center text-sm text-neutral-500">
           {step === "email"
-            ? "We'll email you a magic link and a 6-digit code — use whichever you prefer."
+            ? "We'll email you a magic link and a 6-digit code. Use whichever you prefer."
             : `We sent both to ${email}`}
         </p>
 
@@ -117,7 +117,7 @@ function LoginForm() {
               <p className="mt-2 text-sm leading-relaxed text-neutral-300">
                 Open the email on this device and tap{" "}
                 <span className="font-medium text-neutral-100">Sign in</span>. You&apos;ll
-                be logged in automatically — no code needed.
+                be logged in automatically, no code needed.
               </p>
             </div>
 

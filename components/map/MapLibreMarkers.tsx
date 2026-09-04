@@ -1,16 +1,19 @@
 "use client";
 
-import { useMemo, useRef, type CSSProperties } from "react";
+import { useMemo, useRef, useEffect, type CSSProperties } from "react";
 import { Marker } from "react-map-gl/maplibre";
 import Supercluster from "supercluster";
 import type { Complex } from "@/lib/complexes";
-import { ratingColor } from "@/lib/complexes";
 import { formatRent } from "@/lib/format";
+import type { MapColorMode } from "@/lib/map-color-mode";
 import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
 import {
   clusterBubbleSize,
+  clusterColorFromRentRatios,
   clusterColorFromScores,
+  mapBuildingRent,
   mapScore,
+  markerColorForComplex,
 } from "@/lib/map-marker-style";
 import { rentPillHtml } from "@/lib/map-markers";
 import { filterValidMapComplexes } from "@/lib/map-coordinates";
@@ -20,6 +23,8 @@ type MapLibreMarkersProps = {
   zoom: number;
   bounds: { west: number; south: number; east: number; north: number } | null;
   selectedId: string | null;
+  colorMode: MapColorMode;
+  neighborhoodMedians: Record<string, number>;
   onSelect: (complex: Complex) => void;
   onClusterClick: (lng: number, lat: number, expansionZoom: number) => void;
 };
@@ -31,6 +36,8 @@ export function MapLibreMarkers({
   zoom,
   bounds,
   selectedId,
+  colorMode,
+  neighborhoodMedians,
   onSelect,
   onClusterClick,
 }: MapLibreMarkersProps) {
@@ -44,7 +51,6 @@ export function MapLibreMarkers({
   const index = useMemo(() => {
     const sc = new Supercluster<PointProps>({
       radius: 60,
-      // Match Leaflet disableClusteringAtZoom=14: no clusters at zoom 14+.
       maxZoom: MARKER_ZOOM_THRESHOLD - 1,
     });
 
@@ -70,6 +76,11 @@ export function MapLibreMarkers({
     );
   }, [index, bounds, zoom]);
 
+  // Clear color cache when mode or medians change.
+  useEffect(() => {
+    colorCacheRef.current.clear();
+  }, [colorMode, neighborhoodMedians]);
+
   if (zoom < MARKER_ZOOM_THRESHOLD || !bounds) return null;
 
   return (
@@ -88,16 +99,29 @@ export function MapLibreMarkers({
             (props as { cluster_id: number }).cluster_id
           );
           const count = Number((props as { point_count: number }).point_count);
-          const cacheKey = `${clusterId}:${Math.floor(zoom)}`;
+          const cacheKey = `${colorMode}:${clusterId}:${Math.floor(zoom)}`;
           let color = colorCacheRef.current.get(cacheKey);
           if (!color) {
             const leaves = index.getLeaves(clusterId, 50, 0);
-            const scores: number[] = [];
-            for (const leaf of leaves) {
-              const s = mapScore(leaf.properties);
-              if (s != null) scores.push(s);
+            if (colorMode === "rent") {
+              const ratios: number[] = [];
+              for (const leaf of leaves) {
+                const rent = mapBuildingRent(leaf.properties);
+                const hood = leaf.properties.neighborhood?.trim() ?? "";
+                const avg = hood ? neighborhoodMedians[hood] : null;
+                if (rent != null && avg != null && avg > 0) {
+                  ratios.push(rent / avg);
+                }
+              }
+              color = clusterColorFromRentRatios(ratios);
+            } else {
+              const scores: number[] = [];
+              for (const leaf of leaves) {
+                const s = mapScore(leaf.properties);
+                if (s != null) scores.push(s);
+              }
+              color = clusterColorFromScores(scores);
             }
-            color = clusterColorFromScores(scores);
             colorCacheRef.current.set(cacheKey, color);
           }
           const size = clusterBubbleSize(count);
@@ -140,13 +164,17 @@ export function MapLibreMarkers({
 
         const complex = props as Complex;
         const selected = selectedId === complex.id;
-        const medianRent = complex.cached_median_rent ?? complex.median_rent;
+        const medianRent = mapBuildingRent(complex);
         const rentLabel = formatRent(medianRent);
         const signalHigh = (complex.cached_signal_count ?? 0) > 3;
-        const score = mapScore(complex);
-        const color = ratingColor(score);
+        const color = markerColorForComplex(
+          complex,
+          colorMode,
+          neighborhoodMedians
+        );
 
-        if (rentLabel) {
+        // Rating mode keeps rent pills; rent mode uses colored dots for parity.
+        if (colorMode === "rating" && rentLabel) {
           return (
             <Marker
               key={complex.id}

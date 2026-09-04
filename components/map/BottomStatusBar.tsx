@@ -3,13 +3,15 @@
 import type { ReactNode } from "react";
 import type { Complex } from "@/lib/complexes";
 import { formatRent } from "@/lib/format";
+import type { MapColorMode } from "@/lib/map-color-mode";
 import { boroughAreaLabel, type BoroughArea } from "@/lib/map-boroughs";
 import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
+import { mapBuildingRent } from "@/lib/map-marker-style";
 
 type BottomStatusBarProps = {
   complexes: Complex[];
   zoom: number;
-  /** Viewport API — used especially in MVT mode when markers aren't loaded. */
+  colorMode?: MapColorMode;
   buildingCount?: number | null;
   avgRating?: number | null;
   totalReviews?: number | null;
@@ -29,6 +31,7 @@ function reviewBackedCount(c: Complex): number {
 export function BottomStatusBar({
   complexes,
   zoom,
+  colorMode = "rating",
   buildingCount,
   avgRating: viewportAvg,
   totalReviews: viewportReviews,
@@ -54,7 +57,6 @@ export function BottomStatusBar({
       ? buildingCount
       : complexes.length;
 
-  // Prefer live viewport stats (accurate in MVT mode); fall back to marker data.
   const avgRating =
     viewportAvg != null && Number.isFinite(viewportAvg)
       ? viewportAvg
@@ -69,9 +71,12 @@ export function BottomStatusBar({
         ? markerReviews
         : 0;
 
-  // Never show a rating without review backing.
-  const showAvg = avgRating != null && totalReviews > 0;
-  const showReviews = !mvtMode && totalReviews > 0;
+  const withRentData = complexes.filter((c) => mapBuildingRent(c) != null)
+    .length;
+
+  const showAvg =
+    colorMode === "rating" && avgRating != null && totalReviews > 0;
+  const showReviews = colorMode === "rating" && !mvtMode && totalReviews > 0;
 
   const medianLabel = formatRent(medianRent);
   const boroughLabel = boroughAreaLabel(boroughArea);
@@ -86,35 +91,54 @@ export function BottomStatusBar({
     </span>,
   ];
 
-  if (showAvg) {
+  if (colorMode === "rent") {
+    if (medianLabel) {
+      parts.push(
+        <span key="median">
+          median{" "}
+          <strong className="font-semibold text-neutral-200">{medianLabel}</strong>
+        </span>
+      );
+    }
     parts.push(
-      <span key="rating">
-        avg rating{" "}
+      <span key="with-rent">
         <strong className="font-semibold text-neutral-200">
-          {avgRating.toFixed(1)}
-        </strong>
-      </span>
-    );
-  }
-
-  if (showReviews) {
-    parts.push(
-      <span key="reviews">
-        <strong className="font-semibold text-neutral-200">
-          {totalReviews.toLocaleString()}
+          {withRentData.toLocaleString()}
         </strong>{" "}
-        {totalReviews === 1 ? "review" : "reviews"}
+        with rent data
       </span>
     );
-  }
+  } else {
+    if (showAvg) {
+      parts.push(
+        <span key="rating">
+          avg rating{" "}
+          <strong className="font-semibold text-neutral-200">
+            {avgRating.toFixed(1)}
+          </strong>
+        </span>
+      );
+    }
 
-  if (medianLabel) {
-    parts.push(
-      <span key="rent">
-        median rent{" "}
-        <strong className="font-semibold text-neutral-200">{medianLabel}</strong>
-      </span>
-    );
+    if (showReviews) {
+      parts.push(
+        <span key="reviews">
+          <strong className="font-semibold text-neutral-200">
+            {totalReviews.toLocaleString()}
+          </strong>{" "}
+          {totalReviews === 1 ? "review" : "reviews"}
+        </span>
+      );
+    }
+
+    if (medianLabel) {
+      parts.push(
+        <span key="rent">
+          median rent{" "}
+          <strong className="font-semibold text-neutral-200">{medianLabel}</strong>
+        </span>
+      );
+    }
   }
 
   return (

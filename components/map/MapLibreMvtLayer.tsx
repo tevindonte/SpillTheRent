@@ -4,17 +4,24 @@ import { useEffect, useMemo } from "react";
 import { Source, Layer, useMap } from "react-map-gl/maplibre";
 import type { MapLayerMouseEvent } from "react-map-gl/maplibre";
 import type { MapFilters } from "@/lib/complexes";
+import type { MapColorMode } from "@/lib/map-color-mode";
+import {
+  MVT_RATING_CIRCLE_COLOR,
+  MVT_RENT_CIRCLE_COLOR,
+} from "@/lib/map-color-mode";
 import { buildMvtTileUrl } from "@/lib/mvt-url";
 import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
+import type { ExpressionSpecification } from "maplibre-gl";
 
 type MapLibreMvtLayerProps = {
   filters: MapFilters;
   zoom: number;
+  colorMode: MapColorMode;
   onBuildingId: (id: string) => void;
 };
 
-function absoluteMvtTiles(filters: MapFilters): string {
-  const path = buildMvtTileUrl(filters);
+function absoluteMvtTiles(filters: MapFilters, mode: MapColorMode): string {
+  const path = buildMvtTileUrl(filters, mode);
   if (typeof window === "undefined") return path;
   return `${window.location.origin}${path}`;
 }
@@ -22,11 +29,18 @@ function absoluteMvtTiles(filters: MapFilters): string {
 export function MapLibreMvtLayer({
   filters,
   zoom,
+  colorMode,
   onBuildingId,
 }: MapLibreMvtLayerProps) {
   const { current: mapRef } = useMap();
-  const tilesUrl = useMemo(() => absoluteMvtTiles(filters), [filters]);
+  const tilesUrl = useMemo(
+    () => absoluteMvtTiles(filters, colorMode),
+    [filters, colorMode]
+  );
   const showMvt = zoom < MARKER_ZOOM_THRESHOLD;
+  const circleColor = (
+    colorMode === "rent" ? MVT_RENT_CIRCLE_COLOR : MVT_RATING_CIRCLE_COLOR
+  ) as unknown as ExpressionSpecification;
 
   useEffect(() => {
     const map = mapRef?.getMap();
@@ -89,22 +103,7 @@ export function MapLibreMvtLayer({
             13,
             6,
           ],
-          "circle-color": [
-            "case",
-            ["!", ["has", "score"]],
-            "#6b7280",
-            ["==", ["get", "score"], null],
-            "#6b7280",
-            ["==", ["get", "score"], 0],
-            "#6b7280",
-            [">=", ["get", "score"], 4],
-            "#22c55e",
-            [">=", ["get", "score"], 3],
-            "#eab308",
-            [">=", ["get", "score"], 1],
-            "#ef4444",
-            "#6b7280",
-          ],
+          "circle-color": circleColor,
           "circle-opacity": 0.85,
           "circle-stroke-width": 1,
           "circle-stroke-color": "#000000",

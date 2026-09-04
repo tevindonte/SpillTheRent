@@ -16,14 +16,14 @@ const SLIDES = [
     label: "NOT JUST REVIEWS.",
     title: "We pulled the government records too.",
     subtitle:
-      "Bedbug filings. HPD violations. Tenant lawsuits. Active construction permits. Official data landlords hope you never find.",
+      "See what people actually pay, not what landlords list. Real lease prices from real NYC tenants. Plus bedbug filings, HPD violations, tenant lawsuits, and permits landlords hope you never find.",
     illustration: "pricing",
   },
   {
     label: "MANHATTAN. BROOKLYN. LIC.",
     title: "The tea app for apartments.",
     subtitle:
-      "12,000+ buildings and growing. Search any building and get the full picture — reviews, red flags, real rent prices, all in one place.",
+      "12,000+ buildings and growing. Search any building and get the full picture: reviews, red flags, real rent prices, all in one place.",
     illustration: "scale",
   },
 ] as const;

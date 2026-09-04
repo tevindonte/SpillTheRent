@@ -1,4 +1,4 @@
-# Production launch — Stripe, QA, MVT
+# Production launch: Stripe, QA, MVT
 
 Focused checklist for the three items you deferred. Work top to bottom.
 
@@ -50,7 +50,7 @@ Redeploy after saving.
 3. Card: `4242 4242 4242 4242`, any future expiry, any CVC.
 4. After redirect: Profile shows **Lease Shield active**.
 5. **Supabase → Table Editor → profiles** → your row → `watchlist_premium_until` ~90 days ahead.
-6. Save **4+** buildings on watchlist (building panel / compare) — should not 403.
+6. Save **4+** buildings on watchlist (building panel / compare); should not 403.
 7. **Stripe → Webhooks** → endpoint → recent deliveries → `200` on `checkout.session.completed`.
 
 **If checkout says “Payments are not configured”:** `STRIPE_SECRET_KEY` missing on Render.
@@ -87,8 +87,8 @@ Use **production** (`https://spillthe.rent`) after each deploy. Hard-refresh (Ct
 ### Map
 
 - [ ] Default NYC view loads dots within ~30s (per-tile; “Loading map…” clears).
-- [ ] Pan to Hudson Yards, LIC, Bed-Stuy — dots appear, not permanent empty blocks.
-- [ ] Zoom to 14+ — individual markers / rent pills where data exists.
+- [ ] Pan to Hudson Yards, LIC, Bed-Stuy: dots appear, not permanent empty blocks.
+- [ ] Zoom to 14+: individual markers / rent pills where data exists.
 - [ ] Click building → panel opens; HPD / reviews load.
 - [ ] Filters (stabilized, HPD, Google rating) reduce markers correctly.
 
@@ -125,7 +125,7 @@ Use **production** (`https://spillthe.rent`) after each deploy. Hard-refresh (Ct
 
 Extension ID: `bddecdkjeggppempopcmkagelgbodhon`
 
-- [ ] Load unpacked from `extension/` (or store build) — dev mode OK until published.
+- [ ] Load unpacked from `extension/` (or store build); dev mode OK until published.
 - [ ] **StreetEasy** listing page → banner with HPD count + link to spillthe.rent.
 - [ ] **Zillow** rental listing → same.
 - [ ] **Apartments.com** listing → same.
@@ -142,7 +142,7 @@ Details: `extension/CHROME_WEB_STORE.md`
 
 ---
 
-## 3. MVT on map (later — not required now)
+## 3. MVT on map (later; not required now)
 
 Classic **per-tile markers** are the production map. MVT is optional perf for zoom &lt; 14.
 
@@ -165,13 +165,13 @@ Expect `200` and `bytes:` **&gt; 0** (Manhattan sample tile).
 Only after bytes &gt; 0 in prod:
 
 - Restore `MapMvtLayer` at zoom &lt; 14 in `MapView.tsx`.
-- Keep per-tile markers at zoom ≥ 14 (do **not** use single geojson batch for city view — 1k row cap).
+- Keep per-tile markers at zoom ≥ 14 (do **not** use single geojson batch for city view; 1k row cap).
 
 Until then, ignore MVT migrations for map UX.
 
 ---
 
-## Quick reference — env vars on Render
+## Quick reference: env vars on Render
 
 | Variable | Required for |
 |----------|----------------|
@@ -188,14 +188,14 @@ Until then, ignore MVT migrations for map UX.
 
 1. Request a free key: [carto.com/basemaps/apikey](https://carto.com/basemaps/apikey/) (~5M tiles/month).
 2. Render → Environment → add `NEXT_PUBLIC_CARTO_API_KEY` = that key.
-3. Redeploy (must rebuild — `NEXT_PUBLIC_*` is baked in at build time).
+3. Redeploy (must rebuild; `NEXT_PUBLIC_*` is baked in at build time).
 
 ---
 
 ## Suggested order this week
 
-1. **Map** — confirm `c65af26` on prod (you).
-2. **Stripe test mode** — keys + webhook + one test purchase (30 min).
-3. **QA checklist** — auth, submit, compare, extension (1–2 hrs).
-4. **Chrome** — publish when review passes.
-5. **MVT** — only if you want faster city-zoom; verify SQL + tile bytes first.
+1. **Map:** confirm `c65af26` on prod (you).
+2. **Stripe test mode:** keys + webhook + one test purchase (30 min).
+3. **QA checklist:** auth, submit, compare, extension (1–2 hrs).
+4. **Chrome:** publish when review passes.
+5. **MVT:** only if you want faster city-zoom; verify SQL + tile bytes first.

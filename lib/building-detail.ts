@@ -1,3 +1,5 @@
+import type { QuickRatingStats } from "@/lib/quick-ratings";
+
 export type BuildingSignals = {
   has_bedbug_history: boolean;
   bedbug_last_reported_year: number | null;
@@ -41,6 +43,8 @@ export type BuildingDetail = {
   community_rating: number | null;
   community_review_count: number;
   spill_score: number | null;
+  quick_ratings?: QuickRatingStats | null;
+  rent_by_year?: { year: number; median_rent: number; report_count: number }[];
   hpd_open_violations: number;
   hpd_violation_score: string | null;
   is_rent_stabilized: boolean;

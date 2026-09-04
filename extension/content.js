@@ -1,5 +1,5 @@
 /**
- * Listing overlay v0.3 — StreetEasy, Zillow, Apartments.com
+ * Listing overlay v0.3: StreetEasy, Zillow, Apartments.com
  * Load unpacked: chrome://extensions → Load unpacked → extension/
  */
 (function () {

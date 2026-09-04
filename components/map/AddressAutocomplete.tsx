@@ -14,12 +14,16 @@ type AddressAutocompleteProps = {
   value: ComplexSearchResult | null;
   onChange: (complex: ComplexSearchResult | null) => void;
   disabled?: boolean;
+  hideLabel?: boolean;
+  autoFocus?: boolean;
 };
 
 export function AddressAutocomplete({
   value,
   onChange,
   disabled,
+  hideLabel = false,
+  autoFocus = false,
 }: AddressAutocompleteProps) {
   const [query, setQuery] = useState(value?.name ?? "");
   const [results, setResults] = useState<ComplexSearchResult[]>([]);
@@ -76,13 +80,17 @@ export function AddressAutocomplete({
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="mb-1.5 block text-xs font-medium text-neutral-400">
-        Building address
-      </label>
+      {!hideLabel && (
+        <label className="mb-1.5 block text-xs font-medium text-neutral-400">
+          Building address
+        </label>
+      )}
       <input
         type="text"
         value={query}
         disabled={disabled}
+        autoFocus={autoFocus}
+        data-rent-building-search={autoFocus ? "" : undefined}
         onChange={(e) => {
           setQuery(e.target.value);
           onChange(null);
@@ -93,7 +101,9 @@ export function AddressAutocomplete({
         autoComplete="off"
       />
       {loading && (
-        <span className="absolute right-3 top-9 text-xs text-neutral-500">
+        <span
+          className={`absolute right-3 text-xs text-neutral-500 ${hideLabel ? "top-3" : "top-9"}`}
+        >
           …
         </span>
       )}

@@ -13,6 +13,7 @@ export type Complex = {
   name: string;
   address: string | null;
   borough: string | null;
+  neighborhood?: string | null;
   zip: string | null;
   units: number | null;
   google_rating: number | null;
@@ -174,6 +175,7 @@ function rowToComplex(row: MapSummaryRow): Complex {
     name: row.name,
     address: row.address,
     borough: row.borough,
+    neighborhood: row.neighborhood ?? null,
     zip: row.zip,
     units: row.units,
     google_rating: row.google_rating,
@@ -195,10 +197,10 @@ function rowToComplex(row: MapSummaryRow): Complex {
 
 /** Marker + filter fields only; panel loads full detail on click. */
 const MAP_SUMMARY_COLUMNS_SLIM =
-  "id, name, address, lat, lng, google_rating, google_review_count, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+  "id, name, address, borough, neighborhood, lat, lng, google_rating, google_review_count, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
 
 const MAP_SUMMARY_COLUMNS_SLIM_LEGACY =
-  "id, name, address, lat, lng, google_rating, google_review_count, median_rent, review_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+  "id, name, address, lat, lng, google_rating, google_review_count, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
 
 /** Production DBs before 20260605000001_product_features.sql */
 const MAP_SUMMARY_COLUMNS_LEGACY =

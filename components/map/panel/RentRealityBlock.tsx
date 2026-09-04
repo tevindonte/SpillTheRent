@@ -1,7 +1,7 @@
 "use client";
 
+import { formatRent, formatRentFull } from "@/lib/format";
 import type { BuildingDetail } from "@/lib/building-detail";
-import { formatRent } from "@/lib/format";
 
 type RentRealityBlockProps = {
   detail: BuildingDetail;
@@ -12,7 +12,9 @@ export function RentRealityBlock({ detail, onReportRent }: RentRealityBlockProps
   const reported = detail.median_rent;
   const reportCount = detail.rent_report_count;
   const byBed = detail.rent_by_bedroom ?? {};
+  const byYear = detail.rent_by_year ?? [];
   const hasBreakdown = Object.keys(byBed).length > 0;
+  const showTimeline = byYear.length > 1;
 
   return (
     <section className="mt-5">
@@ -30,7 +32,7 @@ export function RentRealityBlock({ detail, onReportRent }: RentRealityBlockProps
           </p>
           <p className="mt-0.5 text-xs text-neutral-500">
             From {reportCount} rent data point{reportCount === 1 ? "" : "s"} (reviews +
-            reported rents). Listings often omit fees — use{" "}
+            reported rents). Listings often omit fees, so use{" "}
             <a href="/calculator" className="text-orange-500 hover:underline">
               The Receipt
             </a>{" "}
@@ -39,7 +41,7 @@ export function RentRealityBlock({ detail, onReportRent }: RentRealityBlockProps
         </>
       ) : (
         <p className="mt-1 text-sm text-neutral-500">
-          No rent reports yet. Be the first — listings rarely show the real monthly
+          No rent reports yet. Be the first. Listings rarely show the real monthly
           cost.
         </p>
       )}
@@ -56,6 +58,31 @@ export function RentRealityBlock({ detail, onReportRent }: RentRealityBlockProps
             ) : null
           )}
         </ul>
+      )}
+      {showTimeline && (
+        <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+            Rent history
+          </p>
+          <ul className="mt-2 space-y-1.5">
+            {byYear.map((row) => (
+              <li
+                key={row.year}
+                className="flex items-baseline justify-between gap-2 text-sm text-neutral-300"
+              >
+                <span className="tabular-nums text-neutral-400">{row.year}</span>
+                <span className="text-right">
+                  <span className="font-medium text-neutral-100">
+                    {formatRentFull(row.median_rent)}/mo
+                  </span>
+                  <span className="ml-2 text-xs text-neutral-500">
+                    ({row.report_count} report{row.report_count === 1 ? "" : "s"})
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       <button
         type="button"

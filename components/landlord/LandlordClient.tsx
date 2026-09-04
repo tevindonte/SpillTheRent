@@ -95,7 +95,7 @@ export function LandlordClient({ id }: { id: string }) {
           value={
             landlord.avg_google_rating != null
               ? landlord.avg_google_rating.toFixed(1)
-              : "—"
+              : "-"
           }
         />
         <Stat
@@ -103,7 +103,7 @@ export function LandlordClient({ id }: { id: string }) {
           value={
             landlord.avg_hpd_violations != null
               ? landlord.avg_hpd_violations.toFixed(1)
-              : "—"
+              : "-"
           }
         />
       </div>

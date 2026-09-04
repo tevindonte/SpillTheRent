@@ -8,8 +8,9 @@ import type { Profile } from "@/lib/profile";
 import { RED_FLAG_OPTIONS } from "@/lib/submissions/constants";
 import { DhcrSubmissionsCard } from "./DhcrSubmissionsCard";
 import { LeaseShieldCard } from "./LeaseShieldCard";
+import { WatchedBuildingsSection } from "./WatchedBuildingsSection";
 
-type Tab = "overview" | "reviews" | "rentals" | "settings";
+type Tab = "overview" | "watched" | "reviews" | "rentals" | "settings";
 
 type ReviewRow = {
   id: string;
@@ -48,7 +49,7 @@ export function ProfileClient({
   useEffect(() => {
     const shield = searchParams.get("lease_shield");
     if (shield === "success") {
-      setMessage("Lease Shield activated — unlimited watchlist and alerts for 90 days.");
+      setMessage("Lease Shield activated. Unlimited watchlist and alerts for 90 days.");
     } else if (shield === "cancel") {
       setMessage("Checkout canceled. You can upgrade anytime from this page.");
     }
@@ -116,6 +117,7 @@ export function ProfileClient({
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
+    { id: "watched", label: "Watched Buildings" },
     { id: "reviews", label: "Reviews" },
     { id: "rentals", label: "Rental History" },
     { id: "settings", label: "Settings" },
@@ -220,6 +222,15 @@ export function ProfileClient({
                 Add a place on the map →
               </Link>
             </div>
+          </div>
+        )}
+
+        {tab === "watched" && (
+          <div className="space-y-4">
+            <h1 className="text-xl font-semibold text-neutral-50">
+              Watched Buildings
+            </h1>
+            <WatchedBuildingsSection />
           </div>
         )}
 

@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const borough = boroughLabel(params.borough as BoroughSlug);
   const title = `${hood.name}, ${borough} · Apartment Reviews & Violations`;
-  const description = `${hood.building_count} buildings · ${hood.total_reviews} reviews · avg ${hood.avg_hpd_open} open HPD violations. Median rent ${hood.median_rent != null ? formatRent(hood.median_rent) : "—"}/mo. Research before you lease.`;
+  const description = `${hood.building_count} buildings · ${hood.total_reviews} reviews · avg ${hood.avg_hpd_open} open HPD violations. Median rent ${hood.median_rent != null ? formatRent(hood.median_rent) : "-"}/mo. Research before you lease.`;
 
   return {
     title,
@@ -84,7 +84,7 @@ export default async function NeighborhoodPage({ params }: Props) {
             Median rent
           </p>
           <p className="mt-1 text-lg font-semibold text-neutral-100">
-            {hood.median_rent != null ? `${formatRent(hood.median_rent)}/mo` : "—"}
+            {hood.median_rent != null ? `${formatRent(hood.median_rent)}/mo` : "-"}
           </p>
         </div>
         <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">

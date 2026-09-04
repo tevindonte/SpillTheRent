@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const score =
     data.cached_community_score != null
       ? `${Number(data.cached_community_score).toFixed(1)}/5`
-      : "—";
+      : "-";
   const title = `${data.name} · NYC Building Reviews & Violations`;
   const description = `${data.address ?? data.name} in ${data.borough ?? "NYC"}. spillthe.rent score ${score}. HPD: ${data.hpd_violation_score ?? "see map"}. Violations, bedbugs, tenant reviews.`;
 

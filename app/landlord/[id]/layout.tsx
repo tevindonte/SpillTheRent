@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const title = `${data.name} · Slumlord Score & Portfolio`;
-  const description = `NYC landlord ${data.name}: ${data.building_count} buildings, portfolio score ${data.portfolio_score ?? "—"}. Violations and tenant reviews on spillthe.rent.`;
+  const description = `NYC landlord ${data.name}: ${data.building_count} buildings, portfolio score ${data.portfolio_score ?? "-"}. Violations and tenant reviews on spillthe.rent.`;
 
   return {
     title,

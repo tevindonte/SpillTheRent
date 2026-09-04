@@ -21,7 +21,7 @@ export default function RentHistoryToolPage() {
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-neutral-400">
         If you&apos;re in a <strong className="text-neutral-300">rent-stabilized</strong>{" "}
-        apartment, your legal maximum rent is tied to DHCR registration history — not what the
+        apartment, your legal maximum rent is tied to DHCR registration history, not what the
         broker claims. spillthe.rent is building a guided tool to request your official history
         and flag illegal increases.
       </p>
@@ -48,7 +48,7 @@ export default function RentHistoryToolPage() {
             >
               DHCR
             </a>{" "}
-            (online or by mail — can take weeks).
+            (online or by mail; can take weeks).
           </li>
           <li>
             Compare the registered rent to what you&apos;re paying; report your rent on

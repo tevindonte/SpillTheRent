@@ -50,7 +50,7 @@ export async function GET(
     const hint =
       error.message.includes("complexes_mvt_tile") ||
       error.message.includes("does not exist")
-        ? " — run migration 20260611000001_complexes_mvt.sql"
+        ? ". Run migration 20260611000001_complexes_mvt.sql"
         : "";
     return NextResponse.json(
       { error: error.message + hint },

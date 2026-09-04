@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseCoordinates } from "@/lib/complexes";
+import { aggregateQuickRatings } from "@/lib/quick-ratings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RED_FLAG_OPTIONS } from "@/lib/submissions/constants";
 
@@ -56,7 +57,7 @@ export async function GET(
 
   const { data: pricing } = await supabase
     .from("pricing_history")
-    .select("rent, bedrooms")
+    .select("rent, bedrooms, recorded_at")
     .eq("complex_id", id)
     .not("rent", "is", null);
 
@@ -86,6 +87,26 @@ export async function GET(
     const label = BEDROOM_LABELS[bed] ?? `${bed}BR`;
     rentByBedroom[label] = median(rents);
   }
+
+  const byYear = new Map<number, number[]>();
+  for (const row of pricing ?? []) {
+    if (row.rent == null || !row.recorded_at) continue;
+    const year = new Date(row.recorded_at as string).getUTCFullYear();
+    if (!Number.isFinite(year)) continue;
+    if (!byYear.has(year)) byYear.set(year, []);
+    byYear.get(year)!.push(row.rent);
+  }
+  const rent_by_year = Array.from(byYear.entries())
+    .map(([year, rents]) => {
+      const med = median(rents);
+      return {
+        year,
+        median_rent: med != null ? Math.round(med) : 0,
+        report_count: rents.length,
+      };
+    })
+    .filter((r) => r.median_rent > 0)
+    .sort((a, b) => b.year - a.year);
 
   const { data: userReviews } = await supabase
     .from("reviews")
@@ -129,6 +150,16 @@ export async function GET(
     landlord = ll;
   }
 
+  const { data: microRows } = await supabase
+    .from("building_micro_ratings")
+    .select("pests, management, heat_hot_water, noise")
+    .eq("complex_id", id);
+
+  const quick_ratings =
+    microRows && microRows.length > 0
+      ? aggregateQuickRatings(microRows)
+      : null;
+
   return NextResponse.json({
     id: complex.id,
     name: complex.name,
@@ -148,12 +179,14 @@ export async function GET(
     median_rent,
     rent_report_count: allRents.length,
     rent_by_bedroom: rentByBedroom,
+    rent_by_year,
     community_rating,
     community_review_count,
     spill_score:
       complex.cached_community_score != null
         ? Number(complex.cached_community_score)
         : null,
+    quick_ratings,
     hpd_open_violations: complex.hpd_open_violations ?? 0,
     hpd_violation_score: complex.hpd_violation_score,
     is_rent_stabilized: complex.is_rent_stabilized ?? false,

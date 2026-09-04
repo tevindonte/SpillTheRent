@@ -3,13 +3,22 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { FREE_WATCHLIST_LIMIT, isPremiumActive } from "@/lib/stripe";
 
+export type WatchedBuilding = {
+  complex_id: string;
+  created_at: string;
+  name: string;
+  address: string | null;
+  spill_score: number | null;
+  hpd_violation_score: string | null;
+};
+
 export async function GET() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ saved: [], complex_ids: [] });
+    return NextResponse.json({ saved: [], complex_ids: [], buildings: [] });
   }
 
   const { data, error } = await supabase
@@ -23,6 +32,38 @@ export async function GET() {
   }
 
   const complex_ids = (data ?? []).map((r) => r.complex_id);
+  const buildings: WatchedBuilding[] = [];
+
+  if (complex_ids.length > 0) {
+    const admin = createAdminClient();
+    const { data: complexes } = await admin
+      .from("complexes")
+      .select(
+        "id, name, address, cached_community_score, hpd_violation_score"
+      )
+      .in("id", complex_ids);
+
+    const byId = new Map(
+      (complexes ?? []).map((c) => [c.id as string, c] as const)
+    );
+
+    for (const row of data ?? []) {
+      const c = byId.get(row.complex_id);
+      if (!c) continue;
+      buildings.push({
+        complex_id: row.complex_id,
+        created_at: row.created_at,
+        name: c.name as string,
+        address: (c.address as string | null) ?? null,
+        spill_score:
+          c.cached_community_score != null
+            ? Number(c.cached_community_score)
+            : null,
+        hpd_violation_score:
+          (c.hpd_violation_score as string | null) ?? null,
+      });
+    }
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -33,6 +74,7 @@ export async function GET() {
   return NextResponse.json({
     complex_ids,
     saved: data ?? [],
+    buildings,
     premium: isPremiumActive(profile?.watchlist_premium_until),
     limit: FREE_WATCHLIST_LIMIT,
   });

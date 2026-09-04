@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       {
         error:
           uploadError.message.includes("Bucket")
-            ? "Storage not configured — run migration 20260608000001_dhcr_and_review_flags.sql"
+            ? "Storage not configured. Run migration 20260608000001_dhcr_and_review_flags.sql"
             : uploadError.message,
       },
       { status: 500 }
@@ -165,8 +165,8 @@ export async function POST(request: NextRequest) {
     message:
       status === "parsed"
         ? parsed?.overcharge_hint
-          ? "We found a possible overcharge pattern — review the amounts below. Not legal advice."
+          ? "We found a possible overcharge pattern. Review the amounts below. Not legal advice."
           : "Rent amounts extracted from your DHCR PDF. Cross-check against your lease."
-        : "Document saved. We could not auto-read text — our team can review manually.",
+        : "Document saved. We could not auto-read text, so our team can review manually.",
   });
 }

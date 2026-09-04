@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import type { QuickRatingStats } from "@/lib/quick-ratings";
+import { QuickRatingsBreakdown } from "./QuickRatingsBreakdown";
 
 const FIELDS = [
   { key: "pests", label: "Pests" },
@@ -13,12 +15,23 @@ const FIELDS = [
 type MicroRatingBlockProps = {
   complexId: string;
   onToast: (message: string) => void;
+  onSubmitted?: (payload: {
+    quick_ratings: QuickRatingStats;
+    spill_score: number | null;
+  }) => void;
 };
 
-export function MicroRatingBlock({ complexId, onToast }: MicroRatingBlockProps) {
+export function MicroRatingBlock({
+  complexId,
+  onToast,
+  onSubmitted,
+}: MicroRatingBlockProps) {
   const { user } = useAuth();
   const [scores, setScores] = useState<Record<string, number | null>>({});
   const [saving, setSaving] = useState(false);
+  const [justSubmitted, setJustSubmitted] = useState<QuickRatingStats | null>(
+    null
+  );
 
   async function submit() {
     if (!user) {
@@ -40,12 +53,38 @@ export function MicroRatingBlock({ complexId, onToast }: MicroRatingBlockProps) 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to save");
-      onToast("Thanks — quick ratings help the next renter.");
+
+      const stats = data.quick_ratings as QuickRatingStats | undefined;
+      if (stats) {
+        setJustSubmitted(stats);
+        onSubmitted?.({
+          quick_ratings: stats,
+          spill_score:
+            data.spill_score != null && Number.isFinite(data.spill_score)
+              ? Number(data.spill_score)
+              : null,
+        });
+      }
+      onToast("Thanks! Your ratings help future renters.");
     } catch (e) {
       onToast(e instanceof Error ? e.message : "Could not save ratings");
     } finally {
       setSaving(false);
     }
+  }
+
+  if (justSubmitted) {
+    return (
+      <section className="mt-4 space-y-2">
+        <p className="rounded-lg border border-emerald-900/60 bg-emerald-950/40 px-3 py-2 text-xs text-emerald-300">
+          Thanks! Your ratings help future renters.
+        </p>
+        <QuickRatingsBreakdown
+          stats={justSubmitted}
+          title={`Current averages (${justSubmitted.quick_rating_count.toLocaleString()} submission${justSubmitted.quick_rating_count === 1 ? "" : "s"})`}
+        />
+      </section>
+    );
   }
 
   return (
@@ -54,7 +93,7 @@ export function MicroRatingBlock({ complexId, onToast }: MicroRatingBlockProps) 
         Quick ratings (30 sec)
       </h3>
       <p className="mt-1 text-[11px] text-neutral-500">
-        Tap 1–5 for each — no essay required.
+        Tap 1–5 for each. No essay required.
       </p>
       <ul className="mt-3 space-y-2">
         {FIELDS.map(({ key, label }) => (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { ensureProfile } from "@/lib/profile";
+import { aggregateQuickRatings } from "@/lib/quick-ratings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { assertSubmissionRateLimit } from "@/lib/rate-limit";
 
@@ -71,5 +72,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Belt-and-suspenders if DB trigger not yet applied.
+  const { error: cacheError } = await admin.rpc("recalculate_complex_cache", {
+    p_complex_id: complexId,
+  });
+  if (cacheError) {
+    console.warn("recalculate_complex_cache:", cacheError.message);
+  }
+
+  const { data: microRows } = await admin
+    .from("building_micro_ratings")
+    .select("pests, management, heat_hot_water, noise")
+    .eq("complex_id", complexId);
+
+  const quick_ratings = aggregateQuickRatings(microRows ?? []);
+
+  const { data: complex } = await admin
+    .from("complexes")
+    .select("cached_community_score")
+    .eq("id", complexId)
+    .maybeSingle();
+
+  return NextResponse.json({
+    ok: true,
+    quick_ratings,
+    spill_score:
+      complex?.cached_community_score != null
+        ? Number(complex.cached_community_score)
+        : null,
+  });
 }

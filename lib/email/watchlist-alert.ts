@@ -30,7 +30,7 @@ export async function sendWatchlistAlertEmail(
   const items = payload.events
     .map(
       (e) =>
-        `<li><strong>${escapeHtml(e.title)}</strong>${e.summary ? ` — ${escapeHtml(e.summary)}` : ""}</li>`
+        `<li><strong>${escapeHtml(e.title)}</strong>${e.summary ? `: ${escapeHtml(e.summary)}` : ""}</li>`
     )
     .join("");
 
@@ -64,7 +64,7 @@ export async function sendWatchlistAlertEmail(
     body: JSON.stringify({
       from: { address: from, name: "spillthe.rent" },
       to: [{ email_address: { address: payload.to, name: payload.userName } }],
-      subject: `Watchlist: ${payload.buildingName} — new activity`,
+      subject: `Watchlist: ${payload.buildingName} · new activity`,
       htmlbody: html,
       textbody: text,
     }),

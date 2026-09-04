@@ -2,15 +2,25 @@
 
 import { useEffect, useState } from "react";
 import type { Complex } from "@/lib/complexes";
-import { BEDROOM_OPTIONS, MOVE_IN_YEAR_START, type BedroomOption } from "@/lib/submissions/constants";
+import {
+  BEDROOM_OPTIONS,
+  MOVE_IN_YEAR_START,
+  type BedroomOption,
+} from "@/lib/submissions/constants";
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
+import {
+  AddressAutocomplete,
+  type ComplexSearchResult,
+} from "./AddressAutocomplete";
 
 type RentModalProps = {
   open: boolean;
   complex: Complex | null;
   onClose: () => void;
   onSuccess?: () => void;
+  /** When true and no complex, focus building search first. */
+  preferSearch?: boolean;
 };
 
 const currentYear = new Date().getFullYear();
@@ -19,9 +29,17 @@ const YEARS = Array.from(
   (_, i) => currentYear - i
 );
 
-export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps) {
+export function RentModal({
+  open,
+  complex: initialComplex,
+  onClose,
+  onSuccess,
+  preferSearch = false,
+}: RentModalProps) {
   const { user } = useAuth();
+  const [picked, setPicked] = useState<ComplexSearchResult | null>(null);
   const [rent, setRent] = useState("");
+  const [unitNumber, setUnitNumber] = useState("");
   const [bedrooms, setBedrooms] = useState<BedroomOption | "">("");
   const [moveInYear, setMoveInYear] = useState(String(currentYear));
   const [moveOutYear, setMoveOutYear] = useState("");
@@ -30,8 +48,15 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const complexId = initialComplex?.id ?? picked?.id ?? null;
+  const complexName =
+    initialComplex?.name ?? picked?.name ?? null;
+  const needsSearch = !initialComplex && preferSearch;
+
   useEffect(() => {
     if (!open) return;
+    setPicked(null);
+    setError(null);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -44,7 +69,9 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
   }, [open, onClose]);
 
   function handleClose() {
+    setPicked(null);
     setRent("");
+    setUnitNumber("");
     setBedrooms("");
     setMoveInYear(String(currentYear));
     setMoveOutYear("");
@@ -56,7 +83,10 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!complex) return;
+    if (!complexId) {
+      setError("Search and select your building first.");
+      return;
+    }
     setError(null);
 
     const rentNum = Number(rent.replace(/,/g, ""));
@@ -75,12 +105,13 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          complexId: complex.id,
+          complexId,
           rent: rentNum,
           bedrooms,
           moveInYear: Number(moveInYear),
           moveOutYear: stillHere ? null : moveOutYear ? Number(moveOutYear) : null,
           anonymous,
+          unitNumber: unitNumber.trim() || null,
         }),
       });
       const data = await res.json();
@@ -97,7 +128,8 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
     }
   }
 
-  if (!open || !complex) return null;
+  if (!open) return null;
+  if (!needsSearch && !initialComplex) return null;
 
   return (
     <div
@@ -112,7 +144,9 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
         <div className="flex items-center justify-between border-b border-neutral-800 px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold text-neutral-100">Report Rent</h2>
-            <p className="mt-0.5 text-xs text-neutral-500">{complex.name}</p>
+            {complexName && (
+              <p className="mt-0.5 text-xs text-neutral-500">{complexName}</p>
+            )}
           </div>
           <button type="button" onClick={handleClose} className="text-neutral-400 hover:text-white">
             ✕
@@ -126,6 +160,21 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
             </p>
           )}
 
+          {needsSearch && (
+            <div>
+              <label className="mb-1.5 block text-xs text-neutral-400">
+                Your building
+              </label>
+              <AddressAutocomplete
+                value={picked}
+                onChange={setPicked}
+                disabled={submitting}
+                hideLabel
+                autoFocus
+              />
+            </div>
+          )}
+
           <div>
             <label className="mb-1.5 block text-xs text-neutral-400">Monthly rent ($)</label>
             <input
@@ -135,6 +184,20 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
               value={rent}
               onChange={(e) => setRent(e.target.value)}
               className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-100 outline-none focus:border-orange-500/50"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs text-neutral-400">
+              Unit number <span className="text-neutral-600">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={unitNumber}
+              onChange={(e) => setUnitNumber(e.target.value)}
+              placeholder="e.g. 4B"
+              maxLength={32}
+              className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-100 outline-none focus:border-orange-500/50 placeholder:text-neutral-600"
             />
           </div>
 
@@ -178,7 +241,7 @@ export function RentModal({ open, complex, onClose, onSuccess }: RentModalProps)
                 onChange={(e) => setMoveOutYear(e.target.value)}
                 className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 disabled:opacity-50"
               >
-                <option value="">—</option>
+                <option value="">-</option>
                 {YEARS.map((y) => (
                   <option key={y} value={y}>
                     {y}

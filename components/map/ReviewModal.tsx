@@ -213,7 +213,7 @@ export function ReviewModal({
               onChange={(e) => setReviewText(e.target.value)}
               disabled={submitting}
               rows={4}
-              placeholder="Be specific — management, pests, noise, repairs…"
+              placeholder="Be specific: management, pests, noise, repairs…"
               className="w-full resize-none rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2.5 text-sm text-neutral-100 outline-none focus:border-orange-500/50"
             />
             <p className="mt-1 text-xs text-neutral-600">
@@ -256,7 +256,7 @@ export function ReviewModal({
 
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
             <p className="mb-2 text-xs font-medium text-neutral-400">
-              Optional — rent you paid
+              Optional: rent you paid
             </p>
             <div className="grid grid-cols-2 gap-3">
               <input

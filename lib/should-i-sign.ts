@@ -93,19 +93,19 @@ export function buildShouldISignSummary(detail: BuildingDetail): ShouldISignSumm
 
   if (riskPoints >= 5) {
     verdict = "caution";
-    headline = "Proceed with caution — serious red flags on record";
+    headline = "Proceed with caution: serious red flags on record";
   } else if (riskPoints >= 2) {
     verdict = "mixed";
-    headline = "Mixed signals — read violations and reviews before signing";
+    headline = "Mixed signals. Read violations and reviews before signing";
   } else if (riskPoints === 0 && (score == null || score >= 3.5)) {
     verdict = "ok";
-    headline = "Fewer official red flags — still visit and verify in person";
+    headline = "Fewer official red flags, but still visit and verify in person";
   } else if (riskPoints === 0) {
     verdict = "unknown";
-    headline = "Limited data — verify condition and lease terms yourself";
+    headline = "Limited data. Verify condition and lease terms yourself";
   } else {
     verdict = "mixed";
-    headline = "Some concerns on record — do extra due diligence";
+    headline = "Some concerns on record, so do extra due diligence";
   }
 
   if (bullets.length === 0) {

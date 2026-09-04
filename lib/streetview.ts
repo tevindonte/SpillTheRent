@@ -44,7 +44,7 @@ export function panelMapEmbedUrl(
     }
   }
 
-  // Still show OSM pin for buildings with no street imagery — location is free.
+  // Still show OSM pin for buildings with no street imagery; location is free.
   return osmEmbedUrl(lat, lng);
 }
 

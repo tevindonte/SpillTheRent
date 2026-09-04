@@ -18,7 +18,7 @@ export const DEFAULT_MAP_CENTER_LNG_LAT: [number, number] = [
 ];
 export const DEFAULT_MAP_ZOOM = 12;
 
-/** Legacy [lat, lng] — used by non-map helpers. */
+/** Legacy [lat, lng]; used by non-map helpers. */
 export const DEFAULT_MAP_CENTER: [number, number] = [40.7128, -73.98];
 
 /** Default view: Manhattan, Brooklyn, and Long Island City. */
@@ -27,7 +27,7 @@ export const NYC_MAP_BOUNDS: [[number, number], [number, number]] = [
   [40.92, -73.85],
 ];
 
-/** @deprecated Use DEFAULT_MAP_CENTER_LNG_LAT — kept for single-borough fallbacks */
+/** @deprecated Use DEFAULT_MAP_CENTER_LNG_LAT; kept for single-borough fallbacks */
 export const MANHATTAN_CENTER: [number, number] = [40.7831, -73.9712];
 export const MANHATTAN_ZOOM = 13;
 export const MANHATTAN_BOUNDS: [[number, number], [number, number]] = [

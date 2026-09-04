@@ -20,7 +20,9 @@ import { RapSheetShareRow } from "./panel/RapSheetShareRow";
 import { RentRealityBlock } from "./panel/RentRealityBlock";
 import { DataProvenance } from "./panel/DataProvenance";
 import { MicroRatingBlock } from "./panel/MicroRatingBlock";
+import { QuickRatingsBreakdown } from "./panel/QuickRatingsBreakdown";
 import { useToast } from "@/hooks/useToast";
+import { QUICK_RATING_DISPLAY_MIN } from "@/lib/quick-ratings";
 
 type SortOption =
   | "most_recent"
@@ -272,11 +274,26 @@ export function BuildingPanel({
           <RapSheetShareRow detail={detail} onToast={showToast} />
         )}
 
-        <MicroRatingBlock complexId={complex.id} onToast={showToast} />
+        <MicroRatingBlock
+          complexId={complex.id}
+          onToast={showToast}
+          onSubmitted={({ quick_ratings, spill_score }) => {
+            setDetail((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    quick_ratings,
+                    spill_score:
+                      spill_score != null ? spill_score : prev.spill_score,
+                  }
+                : prev
+            );
+          }}
+        />
 
         {detail?.verified === false && (
           <p className="mt-2 text-[10px] text-amber-600/90">
-            Unverified building — data from community import; confirm address on
+            Unverified building. Data from community import; confirm address on
             site.
           </p>
         )}
@@ -387,6 +404,15 @@ export function BuildingPanel({
                 )}
               </div>
             </div>
+
+            {detail.quick_ratings &&
+              detail.quick_ratings.quick_rating_count >=
+                QUICK_RATING_DISPLAY_MIN && (
+                <QuickRatingsBreakdown
+                  stats={detail.quick_ratings}
+                  className="mt-3"
+                />
+              )}
 
             {googleOpen && (
               <div className="mt-3 rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">

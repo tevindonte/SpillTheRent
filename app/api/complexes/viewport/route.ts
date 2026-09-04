@@ -93,7 +93,7 @@ async function rowsInBounds(
 
     const { data, error } = await query.range(offset, offset + PAGE_SIZE - 1);
     if (error) {
-      // Older views may lack cached_review_count — fall back.
+      // Older views may lack cached_review_count; fall back.
       if (
         error.code === "42703" ||
         error.message?.toLowerCase().includes("cached_review_count")

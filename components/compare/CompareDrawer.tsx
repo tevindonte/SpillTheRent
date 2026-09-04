@@ -130,8 +130,8 @@ export function CompareDrawer({
                     </Link>
                     <p className="mt-1 text-xs text-neutral-500">
                       Score{" "}
-                      {d.spill_score != null ? d.spill_score.toFixed(1) : "—"} · HPD{" "}
-                      {d.hpd_violation_score ?? "—"} ({d.hpd_open_violations} open)
+                      {d.spill_score != null ? d.spill_score.toFixed(1) : "-"} · HPD{" "}
+                      {d.hpd_violation_score ?? "-"} ({d.hpd_open_violations} open)
                       {d.median_rent != null && ` · ${formatRent(d.median_rent)}/mo`}
                     </p>
                     {d.red_flags.length > 0 && (

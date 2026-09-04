@@ -70,7 +70,7 @@ export function isNewYorkState(addr: NominatimAddress | undefined): boolean {
   return state === "new york" || state === "ny";
 }
 
-/** NYC five boroughs / New York City — not upstate NY. */
+/** NYC five boroughs / New York City, not upstate NY. */
 export function isNycAddress(addr: NominatimAddress | undefined): boolean {
   if (!isNewYorkState(addr)) return false;
   const city = (addr?.city ?? addr?.town ?? "").toLowerCase();

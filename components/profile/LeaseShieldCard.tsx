@@ -40,7 +40,7 @@ export function LeaseShieldCard({
     <div className="rounded-xl border border-orange-500/30 bg-orange-950/20 p-4">
       <p className="text-sm font-semibold text-orange-300">Lease Shield</p>
       <p className="mt-1 text-xs leading-relaxed text-neutral-400">
-        $9.99 for 90 days — unlimited watchlist buildings + email when HPD, reviews,
+        $9.99 for 90 days: unlimited watchlist buildings + email when HPD, reviews,
         or rent reports change on saved buildings.
       </p>
       <button

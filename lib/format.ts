@@ -7,6 +7,12 @@ export function formatRent(amount: number | null | undefined): string | null {
   return `$${Math.round(amount)}`;
 }
 
+/** Full currency for banners, e.g. $3,400 */
+export function formatRentFull(amount: number | null | undefined): string | null {
+  if (amount == null || !Number.isFinite(amount)) return null;
+  return `$${Math.round(amount).toLocaleString("en-US")}`;
+}
+
 export function median(values: number[]): number | null {
   if (!values.length) return null;
   const sorted = [...values].sort((a, b) => a - b);

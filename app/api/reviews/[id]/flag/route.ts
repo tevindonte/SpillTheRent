@@ -59,5 +59,5 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true, message: "Thanks — we'll review this flag." });
+  return NextResponse.json({ ok: true, message: "Thanks. We'll review this flag." });
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { isInNycServiceArea } from "@/lib/nyc-service-area";
 
-/** One-time browser geolocation check — does not move the map. */
+/** One-time browser geolocation check; does not move the map. */
 export function useUserOutsideNyc(): boolean | null {
   const [outside, setOutside] = useState<boolean | null>(null);
 

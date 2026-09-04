@@ -117,7 +117,7 @@ export function DhcrUploadForm() {
         <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-950/80 p-4 text-sm">
           {parsed.overcharge_hint && (
             <p className="mb-2 font-medium text-amber-300">
-              Possible overcharge pattern — verify with DHCR or a tenant attorney.
+              Possible overcharge pattern. Verify with DHCR or a tenant attorney.
             </p>
           )}
           {labeledBedrooms.length > 0 && (
@@ -149,13 +149,13 @@ export function DhcrUploadForm() {
             <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-neutral-500">
               {parsed.rent_lines.slice(0, 12).map((line) => (
                 <li key={line.amount}>
-                  {formatRent(line.amount)}/mo — {line.context.slice(0, 80)}…
+                  {formatRent(line.amount)}/mo: {line.context.slice(0, 80)}…
                 </li>
               ))}
             </ul>
           )}
           <p className="mt-3 text-[10px] text-neutral-600">
-            Automated extraction — not legal advice. Official DHCR letter controls.
+            Automated extraction, not legal advice. Official DHCR letter controls.
           </p>
         </div>
       )}
