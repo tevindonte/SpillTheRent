@@ -9,10 +9,9 @@ import type { MapColorMode } from "@/lib/map-color-mode";
 import { MARKER_ZOOM_THRESHOLD } from "@/lib/map-bounds";
 import {
   clusterBubbleSize,
+  clusterColorFromComplexes,
   clusterColorFromRentRatios,
-  clusterColorFromScores,
   mapBuildingRent,
-  mapScoreOrSignal,
   markerColorForComplex,
 } from "@/lib/map-marker-style";
 import { rentPillHtml } from "@/lib/map-markers";
@@ -115,12 +114,9 @@ export function MapLibreMarkers({
               }
               color = clusterColorFromRentRatios(ratios);
             } else {
-              const scores: number[] = [];
-              for (const leaf of leaves) {
-                const s = mapScoreOrSignal(leaf.properties);
-                if (s != null) scores.push(s);
-              }
-              color = clusterColorFromScores(scores);
+              color = clusterColorFromComplexes(
+                leaves.map((leaf) => leaf.properties)
+              );
             }
             colorCacheRef.current.set(cacheKey, color);
           }

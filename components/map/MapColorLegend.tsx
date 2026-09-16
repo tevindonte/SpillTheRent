@@ -8,11 +8,11 @@ type MapColorLegendProps = {
 };
 
 const RATING_ROWS = [
-  { swatch: "#22c55e", label: "4.0+ rated / Clean HPD" },
-  { swatch: "#eab308", label: "3.0–4.0 / Minor HPD" },
-  { swatch: "#f97316", label: "Moderate HPD" },
-  { swatch: "#ef4444", label: "Below 3.0 / Severe / bedbugs" },
-  { swatch: "#6b7280", label: "No data" },
+  { swatch: "#22c55e", label: "4.0+ community or Google rating" },
+  { swatch: "#eab308", label: "3.0–4.0 community or Google rating" },
+  { swatch: "#ef4444", label: "Below 3.0 rating or Severe HPD" },
+  { swatch: "#f97316", label: "Moderate HPD violations" },
+  { swatch: "#6b7280", label: "No data, Minor/Clean HPD, unknown" },
 ] as const;
 
 const RENT_ROWS = [

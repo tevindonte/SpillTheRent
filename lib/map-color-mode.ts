@@ -62,19 +62,13 @@ export function rentColorFromBuilding(
 
 /**
  * MapLibre circle-color for By Rating.
- * Priority: community/google score → hpd_score_num → has_bedbug → gray.
- * hpd_score_num: Severe=1, Moderate=2, Minor=3, Clean=4, none=0
- *
- * Use coalesce before to-number so missing MVT attrs (null score) do not
- * abort the expression; fall through to HPD / bedbug.
+ * Green/yellow ONLY from community or Google scores.
+ * HPD: Severe→red, Moderate→orange, Minor/Clean→gray.
+ * Bedbug red only when no rating and no HPD score.
  */
 export const MVT_RATING_CIRCLE_COLOR = [
   "case",
-  [
-    ">=",
-    ["to-number", ["coalesce", ["get", "score"], 0]],
-    1,
-  ],
+  [">=", ["to-number", ["coalesce", ["get", "score"], 0]], 1],
   [
     "case",
     [">=", ["to-number", ["get", "score"]], 4],
@@ -87,9 +81,9 @@ export const MVT_RATING_CIRCLE_COLOR = [
     "match",
     ["to-number", ["coalesce", ["get", "hpd_score_num"], 0]],
     4,
-    MAP_COLORS.green,
+    MAP_COLORS.gray,
     3,
-    MAP_COLORS.yellow,
+    MAP_COLORS.gray,
     2,
     MAP_COLORS.orange,
     1,
