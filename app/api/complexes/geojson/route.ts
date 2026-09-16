@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { MapFilters } from "@/lib/complexes";
-import { ratingColor } from "@/lib/complexes";
 import { parseBoroughAreaParam } from "@/lib/map-boroughs";
+import { mapRatingColor } from "@/lib/map-marker-style";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const MAX_FEATURES = 8000;
@@ -30,15 +30,6 @@ function parseFilters(searchParams: URLSearchParams): MapFilters {
     hasHpdViolations: searchParams.get("hasHpdViolations") === "true",
     minGoogleRating: Number.isFinite(minGoogleRating) ? minGoogleRating : undefined,
   };
-}
-
-function mapScore(row: {
-  cached_community_score: number | null;
-  google_rating: number | null;
-}): number | null {
-  if (row.cached_community_score != null) return row.cached_community_score;
-  if (row.google_rating != null) return row.google_rating;
-  return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -80,9 +71,32 @@ export async function GET(request: NextRequest) {
       google_rating: number | null;
       cached_median_rent: number | null;
       hpd_open_violations: number | null;
+      hpd_violation_score: string | null;
+      has_bedbug_history: boolean | null;
       cached_signal_count: number | null;
     }) => {
-      const score = mapScore(row);
+      const color = mapRatingColor({
+        id: row.id,
+        name: row.name,
+        address: null,
+        borough: null,
+        zip: null,
+        units: null,
+        google_rating: row.google_rating,
+        google_review_count: null,
+        street_view_url: null,
+        median_rent: null,
+        review_count: 0,
+        lat: Number(row.lat),
+        lng: Number(row.lng),
+        cached_community_score: row.cached_community_score,
+        hpd_violation_score: row.hpd_violation_score,
+        has_bedbug_history: row.has_bedbug_history ?? false,
+      });
+      const score =
+        row.cached_community_score != null
+          ? row.cached_community_score
+          : row.google_rating;
       return {
         type: "Feature" as const,
         geometry: {
@@ -93,9 +107,11 @@ export async function GET(request: NextRequest) {
           id: row.id,
           name: row.name,
           score,
-          color: ratingColor(score),
+          color,
           median_rent: row.cached_median_rent,
           hpd: row.hpd_open_violations ?? 0,
+          hpd_violation_score: row.hpd_violation_score,
+          has_bedbug_history: row.has_bedbug_history ?? false,
           signals: row.cached_signal_count ?? 0,
         },
       };

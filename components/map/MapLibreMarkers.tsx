@@ -12,7 +12,7 @@ import {
   clusterColorFromRentRatios,
   clusterColorFromScores,
   mapBuildingRent,
-  mapScore,
+  mapScoreOrSignal,
   markerColorForComplex,
 } from "@/lib/map-marker-style";
 import { rentPillHtml } from "@/lib/map-markers";
@@ -117,7 +117,7 @@ export function MapLibreMarkers({
             } else {
               const scores: number[] = [];
               for (const leaf of leaves) {
-                const s = mapScore(leaf.properties);
+                const s = mapScoreOrSignal(leaf.properties);
                 if (s != null) scores.push(s);
               }
               color = clusterColorFromScores(scores);
@@ -190,7 +190,7 @@ export function MapLibreMarkers({
                 className="rent-pill-marker"
                 // eslint-disable-next-line react/no-danger
                 dangerouslySetInnerHTML={{
-                  __html: rentPillHtml(rentLabel, selected, signalHigh),
+                  __html: rentPillHtml(rentLabel, selected, signalHigh, color),
                 }}
               />
             </Marker>

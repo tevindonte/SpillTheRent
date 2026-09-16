@@ -44,6 +44,8 @@ type BoundsRow = {
   lat: number;
   lng: number;
   hpd_open_violations: number | null;
+  hpd_violation_score: string | null;
+  has_bedbug_history: boolean | null;
   is_rent_stabilized: boolean | null;
   cached_median_rent: number | null;
   cached_review_count: number | null;
@@ -99,7 +101,8 @@ export async function GET(request: NextRequest) {
         : null,
     review_count: row.cached_review_count ?? 0,
     hpd_open_violations: row.hpd_open_violations ?? 0,
-    hpd_violation_score: null as string | null,
+    hpd_violation_score: row.hpd_violation_score ?? null,
+    has_bedbug_history: row.has_bedbug_history ?? false,
     is_rent_stabilized: row.is_rent_stabilized ?? false,
     cached_median_rent: row.cached_median_rent,
     cached_review_count: row.cached_review_count ?? 0,

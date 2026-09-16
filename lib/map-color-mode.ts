@@ -5,6 +5,7 @@ export const MAP_MODE_STORAGE_KEY = "spr_map_mode";
 export const MAP_COLORS = {
   green: "#22c55e",
   yellow: "#eab308",
+  orange: "#f97316",
   red: "#ef4444",
   gray: "#6b7280",
 } as const;
@@ -59,22 +60,47 @@ export function rentColorFromBuilding(
   return rentRatioColor(buildingRent / neighborhoodAvg);
 }
 
-/** MapLibre circle-color for By Rating (property: score). */
+/**
+ * MapLibre circle-color for By Rating.
+ * Priority: community/google score → hpd_score_num → has_bedbug → gray.
+ * hpd_score_num: Severe=1, Moderate=2, Minor=3, Clean=4, none=0
+ *
+ * Use coalesce before to-number so missing MVT attrs (null score) do not
+ * abort the expression; fall through to HPD / bedbug.
+ */
 export const MVT_RATING_CIRCLE_COLOR = [
   "case",
-  ["!", ["has", "score"]],
-  MAP_COLORS.gray,
-  ["==", ["get", "score"], null],
-  MAP_COLORS.gray,
-  ["==", ["get", "score"], 0],
-  MAP_COLORS.gray,
-  [">=", ["get", "score"], 4],
-  MAP_COLORS.green,
-  [">=", ["get", "score"], 3],
-  MAP_COLORS.yellow,
-  [">=", ["get", "score"], 1],
-  MAP_COLORS.red,
-  MAP_COLORS.gray,
+  [
+    ">=",
+    ["to-number", ["coalesce", ["get", "score"], 0]],
+    1,
+  ],
+  [
+    "case",
+    [">=", ["to-number", ["get", "score"]], 4],
+    MAP_COLORS.green,
+    [">=", ["to-number", ["get", "score"]], 3],
+    MAP_COLORS.yellow,
+    MAP_COLORS.red,
+  ],
+  [
+    "match",
+    ["to-number", ["coalesce", ["get", "hpd_score_num"], 0]],
+    4,
+    MAP_COLORS.green,
+    3,
+    MAP_COLORS.yellow,
+    2,
+    MAP_COLORS.orange,
+    1,
+    MAP_COLORS.red,
+    [
+      "case",
+      [">", ["to-number", ["coalesce", ["get", "has_bedbug"], 0]], 0],
+      MAP_COLORS.red,
+      MAP_COLORS.gray,
+    ],
+  ],
 ] as const;
 
 /** MapLibre circle-color for By Rent (property: rent_ratio). */

@@ -23,6 +23,7 @@ export type Complex = {
   review_count: number;
   hpd_open_violations?: number;
   hpd_violation_score?: string | null;
+  has_bedbug_history?: boolean;
   is_rent_stabilized?: boolean;
   cached_median_rent?: number | null;
   cached_review_count?: number;
@@ -65,6 +66,7 @@ type MapSummaryRow = {
   cached_signal_count?: number | null;
   hpd_open_violations?: number | null;
   hpd_violation_score?: string | null;
+  has_bedbug_history?: boolean | null;
   is_rent_stabilized?: boolean | null;
 };
 
@@ -187,6 +189,7 @@ function rowToComplex(row: MapSummaryRow): Complex {
     review_count: row.review_count ?? 0,
     hpd_open_violations: row.hpd_open_violations ?? 0,
     hpd_violation_score: row.hpd_violation_score ?? null,
+    has_bedbug_history: row.has_bedbug_history ?? false,
     is_rent_stabilized: row.is_rent_stabilized ?? false,
     cached_median_rent: row.cached_median_rent ?? row.median_rent,
     cached_review_count: row.cached_review_count ?? row.review_count ?? 0,
@@ -197,7 +200,7 @@ function rowToComplex(row: MapSummaryRow): Complex {
 
 /** Marker + filter fields only; panel loads full detail on click. */
 const MAP_SUMMARY_COLUMNS_SLIM =
-  "id, name, address, borough, neighborhood, lat, lng, google_rating, google_review_count, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
+  "id, name, address, borough, neighborhood, lat, lng, google_rating, google_review_count, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, has_bedbug_history, is_rent_stabilized";
 
 const MAP_SUMMARY_COLUMNS_SLIM_LEGACY =
   "id, name, address, lat, lng, google_rating, google_review_count, median_rent, review_count, cached_median_rent, cached_review_count, cached_community_score, cached_signal_count, hpd_open_violations, hpd_violation_score, is_rent_stabilized";
@@ -222,7 +225,8 @@ function isMapSummarySchemaError(error: {
     blob.includes("cached_median_rent") ||
     blob.includes("cached_review_count") ||
     blob.includes("cached_community_score") ||
-    blob.includes("cached_signal_count")
+    blob.includes("cached_signal_count") ||
+    blob.includes("has_bedbug_history")
   );
 }
 

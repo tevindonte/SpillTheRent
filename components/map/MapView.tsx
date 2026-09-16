@@ -72,6 +72,11 @@ function detailToComplex(data: Record<string, unknown>): Complex {
     lng: data.lng as number,
     hpd_open_violations: (data.hpd_open_violations as number) ?? 0,
     hpd_violation_score: (data.hpd_violation_score as string | null) ?? null,
+    has_bedbug_history:
+      Boolean(
+        (data as { signals?: { has_bedbug_history?: boolean } }).signals
+          ?.has_bedbug_history
+      ) || Boolean(data.has_bedbug_history),
     is_rent_stabilized: (data.is_rent_stabilized as boolean) ?? false,
   };
 }

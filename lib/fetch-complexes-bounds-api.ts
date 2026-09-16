@@ -9,6 +9,8 @@ type GeoJsonFeature = {
     score: number | null;
     median_rent: number | null;
     hpd: number;
+    hpd_violation_score?: string | null;
+    has_bedbug_history?: boolean;
     signals: number;
   };
   geometry: { coordinates: [number, number] };
@@ -34,7 +36,8 @@ function featureToComplex(f: GeoJsonFeature): Complex {
     lng: f.geometry.coordinates[0],
     review_count: 0,
     hpd_open_violations: f.properties.hpd,
-    hpd_violation_score: null,
+    hpd_violation_score: f.properties.hpd_violation_score ?? null,
+    has_bedbug_history: f.properties.has_bedbug_history ?? false,
     is_rent_stabilized: false,
     cached_median_rent: f.properties.median_rent,
     cached_community_score: score,

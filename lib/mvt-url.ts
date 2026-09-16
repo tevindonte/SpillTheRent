@@ -14,6 +14,8 @@ export function buildMvtTileUrl(
     params.set("minGoogleRating", String(filters.minGoogleRating));
   }
   if (mode === "rent") params.set("mode", "rent");
+  // Bust CDN/browser tile cache when MVT properties change.
+  params.set("v", "3");
   const qs = params.toString();
   return `/api/complexes/mvt/{z}/{x}/{y}${qs ? `?${qs}` : ""}`;
 }
