@@ -3,7 +3,7 @@ import type { MapFilters } from "@/lib/complexes";
 import { median } from "@/lib/format";
 import {
   applyBoroughAreaFilter,
-  type BoroughArea,
+  parseBoroughAreaParam,
 } from "@/lib/map-boroughs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -34,22 +34,10 @@ function parseBounds(searchParams: URLSearchParams) {
   return { south, north, west, east };
 }
 
-function parseBoroughArea(raw: string | null): BoroughArea | undefined {
-  if (
-    raw === "all" ||
-    raw === "manhattan" ||
-    raw === "brooklyn" ||
-    raw === "lic"
-  ) {
-    return raw;
-  }
-  return undefined;
-}
-
 function parseFilters(searchParams: URLSearchParams): MapFilters {
   const minGoogleRating = parseFloat(searchParams.get("minGoogleRating") ?? "");
   return {
-    boroughArea: parseBoroughArea(searchParams.get("boroughArea")),
+    boroughArea: parseBoroughAreaParam(searchParams.get("boroughArea")),
     rentStabilizedOnly: searchParams.get("rentStabilizedOnly") === "true",
     hasHpdViolations: searchParams.get("hasHpdViolations") === "true",
     minGoogleRating: Number.isFinite(minGoogleRating) ? minGoogleRating : undefined,

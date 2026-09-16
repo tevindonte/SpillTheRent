@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { BoroughArea } from "@/lib/map-boroughs";
+import {
+  parseBoroughAreaParam,
+  type BoroughArea,
+} from "@/lib/map-boroughs";
 
 function parseBoroughArea(raw: string | null): BoroughArea {
-  if (raw === "manhattan" || raw === "brooklyn" || raw === "lic") return raw;
-  return "all";
+  return parseBoroughAreaParam(raw) ?? "all";
 }
 
 function buildingScore(row: {
@@ -21,13 +23,11 @@ function buildingScore(row: {
   );
 }
 
-function matchesBorough(borough: string | null, neighborhood: string | null, area: BoroughArea): boolean {
+function matchesBorough(borough: string | null, area: BoroughArea): boolean {
   if (area === "all") return true;
   if (area === "manhattan") return borough === "Manhattan";
   if (area === "brooklyn") return borough === "Brooklyn";
-  if (area === "lic") {
-    return borough === "Queens" && (neighborhood ?? "").toLowerCase().includes("long island city");
-  }
+  if (area === "queens") return borough === "Queens";
   return true;
 }
 
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
   for (const c of complexes ?? []) {
     if (!c.landlord_id) continue;
-    if (!matchesBorough(c.borough, c.neighborhood, boroughArea)) continue;
+    if (!matchesBorough(c.borough, boroughArea)) continue;
 
     const score = buildingScore(c);
     let agg = byLandlord.get(c.landlord_id);

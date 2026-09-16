@@ -20,10 +20,10 @@ const SLIDES = [
     illustration: "pricing",
   },
   {
-    label: "MANHATTAN. BROOKLYN. LIC.",
+    label: "MANHATTAN. BROOKLYN. QUEENS.",
     title: "The tea app for apartments.",
     subtitle:
-      "12,000+ buildings and growing. Search any building and get the full picture: reviews, red flags, real rent prices, all in one place.",
+      "24,000+ buildings and growing. Search any building and get the full picture: reviews, red flags, real rent prices, all in one place.",
     illustration: "scale",
   },
 ] as const;

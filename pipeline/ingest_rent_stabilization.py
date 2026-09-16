@@ -288,7 +288,7 @@ def main() -> None:
     print(f"Parsed {len(records)} unique stabilized addresses from PDF.")
 
     if not records:
-        print("No records parsed — check PDF format or URL.", file=sys.stderr)
+        print("No records parsed - check PDF format or URL.", file=sys.stderr)
         sys.exit(1)
 
     client = get_supabase_client()
@@ -326,7 +326,7 @@ def main() -> None:
     if records and records[0].get("stabilization_year"):
         year = int(records[0]["stabilization_year"])
 
-    print(f"Matched {len(matched_ids)} addresses → updating complexes in batches…")
+    print(f"Matched {len(matched_ids)} addresses -> updating complexes in batches...")
     written = batch_mark_rent_stabilized(
         client, matched_ids, stabilization_year=year
     )

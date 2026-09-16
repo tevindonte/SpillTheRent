@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { MapFilters } from "@/lib/complexes";
 import { decodeBytea } from "@/lib/decode-bytea";
-import type { BoroughArea } from "@/lib/map-boroughs";
+import { parseBoroughAreaParam } from "@/lib/map-boroughs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 function parseFilters(searchParams: URLSearchParams): MapFilters {
-  const raw = searchParams.get("boroughArea");
-  const boroughArea =
-    raw === "all" || raw === "manhattan" || raw === "brooklyn" || raw === "lic"
-      ? (raw as BoroughArea)
-      : undefined;
   const minGoogleRating = parseFloat(searchParams.get("minGoogleRating") ?? "");
   return {
-    boroughArea,
+    boroughArea: parseBoroughAreaParam(searchParams.get("boroughArea")),
     rentStabilizedOnly: searchParams.get("rentStabilizedOnly") === "true",
     hasHpdViolations: searchParams.get("hasHpdViolations") === "true",
     minGoogleRating: Number.isFinite(minGoogleRating) ? minGoogleRating : undefined,

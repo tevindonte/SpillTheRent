@@ -111,24 +111,30 @@ export function MapSearchBar({ onSelectBuilding }: MapSearchBarProps) {
         disabled={selecting}
         className="w-full rounded-xl border border-neutral-700 bg-neutral-900/95 px-4 py-3 text-sm text-neutral-100 shadow-lg backdrop-blur-sm placeholder:text-neutral-500 outline-none focus:border-orange-500/50"
       />
-      {open && results.length > 0 && (
+      {open && (results.length > 0 || (!loading && query.length >= 2)) && (
         <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-64 overflow-y-auto rounded-xl border border-neutral-800 bg-neutral-950 py-1 shadow-xl">
           {loading && (
             <li className="px-3 py-2 text-xs text-neutral-500">Searching…</li>
+          )}
+          {!loading && results.length === 0 && (
+            <li className="px-3 py-2 text-xs text-neutral-500">
+              No buildings found. Try the street number and name only (e.g. 313
+              West 37).
+            </li>
           )}
           {results.map((hit) => (
             <li key={hit.id}>
               <button
                 type="button"
-                onClick={() => pick(hit)}
+                onClick={() => void pick(hit)}
                 className="w-full px-3 py-2.5 text-left hover:bg-neutral-900"
               >
                 <p className="truncate text-sm font-medium text-neutral-100">
                   {hit.name}
                 </p>
-                {hit.address && (
+                {(hit.address || hit.zip) && (
                   <p className="truncate text-xs text-neutral-500">
-                    {hit.address}
+                    {[hit.address, hit.zip].filter(Boolean).join(" · ")}
                   </p>
                 )}
               </button>
