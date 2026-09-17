@@ -245,32 +245,39 @@ def batch_update_complex_signals(updates: dict[str, dict[str, Any]]) -> None:
         return
 
     import os
+    import time
 
     from dotenv import load_dotenv
 
     load_dotenv(PIPELINE_DIR / ".env")
     load_dotenv(PIPELINE_DIR.parent / ".env.local")
 
-    from supabase_batch import _fresh_supabase_client, _run_sql_job, retry_execute
+    from supabase_batch import _fresh_supabase_client, _run_sql_job, chunked, retry_execute
 
     def _sql_update() -> None:
         import psycopg2
+        from psycopg2.extras import execute_batch
 
         db_url = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL")
         if not db_url:
             raise RuntimeError("No DATABASE_URL")
         items = list(updates.items())
+        # All updates in this call share the same field keys
+        field_keys = list(items[0][1].keys())
+        set_clause = ", ".join(f"{k} = %s" for k in field_keys)
+        sql = f"UPDATE complexes SET {set_clause} WHERE id = %s::uuid"
+
         conn = psycopg2.connect(db_url)
         try:
             with conn.cursor() as cur:
-                for cid, fields in items:
-                    sets = ", ".join(f"{k} = %s" for k in fields)
-                    vals = list(fields.values()) + [cid]
-                    cur.execute(
-                        f"UPDATE complexes SET {sets} WHERE id = %s::uuid",
-                        vals,
-                    )
-            conn.commit()
+                cur.execute("SET statement_timeout = '120s'")
+                for batch in chunked(items, 200):
+                    params = [
+                        tuple(fields[k] for k in field_keys) + (cid,)
+                        for cid, fields in batch
+                    ]
+                    execute_batch(cur, sql, params, page_size=200)
+                    conn.commit()
         finally:
             conn.close()
 
@@ -281,8 +288,9 @@ def batch_update_complex_signals(updates: dict[str, dict[str, Any]]) -> None:
     client = _fresh_supabase_client()
     items = list(updates.items())
     for i, (cid, fields) in enumerate(tqdm(items, desc="Updating complexes")):
-        if i > 0 and i % 400 == 0:
+        if i > 0 and i % 200 == 0:
             client = _fresh_supabase_client()
+            time.sleep(0.15)
         retry_execute(
             lambda c=cid, f=fields, cl=client: cl.table("complexes")
             .update(f)
