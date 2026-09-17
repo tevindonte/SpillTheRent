@@ -22,8 +22,8 @@ export const BOROUGH_FLY_TO: Record<
   manhattan: { center: [40.7831, -73.9712], zoom: 13 },
   brooklyn: { center: [40.6782, -73.9442], zoom: 13 },
   queens: { center: [40.7282, -73.7949], zoom: 12 },
-  // Hudson County: Jersey City + Hoboken
-  newjersey: { center: [40.7178, -74.0431], zoom: 12 },
+  // North Jersey: Hudson / Essex / Bergen / Union corridor
+  newjersey: { center: [40.7357, -74.1745], zoom: 10 },
 };
 
 /** Normalize query/API boroughArea values (`lic` kept as alias → queens). */

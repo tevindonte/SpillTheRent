@@ -1,17 +1,18 @@
 """
-Ingest Hudson County (NJ) multifamily parcels into complexes.
+Ingest NJ multifamily parcels (MOD-IV) into complexes.
 
 Source: NJ OGIS MOD-IV ArcGIS layer (Socrata id 9s9p-umfy is not published).
-Filters: COUNTY=HUDSON, PROP_CLASS in 4A/4B/4C, DWELL > 10.
-Municipalities: Jersey City + Hoboken first (expand later).
+Counties: Hudson, Essex, Bergen, Union.
+Filter: PROP_CLASS in 4A/4B/4C (no unit-count requirement — DWELL is usually blank).
 
 Usage:
-  python ingest_nj_buildings.py [--limit 100]
+  python ingest_nj_buildings.py [--limit 20000]
 """
 
 from __future__ import annotations
 
 import argparse
+import re
 import time
 from typing import Any
 
@@ -27,23 +28,44 @@ NJ_MOD4_URL = (
     "NJ_TaxListSearch/MapServer/2/query"
 )
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-TARGET_MUNS = {"JERSEY CITY CITY", "HOBOKEN CITY"}
+
+# Four-county North Jersey expansion
+TARGET_COUNTIES = ("HUDSON", "ESSEX", "BERGEN", "UNION")
 PAGE_SIZE = 1000
+
+# Friendly display names for common municipalities
+MUN_DISPLAY = {
+    "JERSEY CITY CITY": "Jersey City",
+    "HOBOKEN CITY": "Hoboken",
+    "BAYONNE CITY": "Bayonne",
+    "UNION CITY CITY": "Union City",
+    "NEWARK CITY": "Newark",
+    "EAST ORANGE CITY": "East Orange",
+    "MONTCLAIR TWP": "Montclair",
+    "FORT LEE BORO": "Fort Lee",
+    "ENGLEWOOD CITY": "Englewood",
+    "HACKENSACK CITY": "Hackensack",
+    "ELIZABETH CITY": "Elizabeth",
+}
 
 
 def _title_municipality(mun: str) -> str:
-    upper = mun.strip().upper()
-    if upper.startswith("JERSEY CITY"):
-        return "Jersey City"
-    if upper.startswith("HOBOKEN"):
-        return "Hoboken"
-    return mun.title().replace(" City", "").replace("CITY", "").strip() or mun.title()
+    raw = (mun or "").strip()
+    upper = raw.upper()
+    if upper in MUN_DISPLAY:
+        return MUN_DISPLAY[upper]
+    cleaned = re.sub(
+        r"\s+(CITY|TOWN|TWP|TOWNSHIP|BORO|BOROUGH)\s*$",
+        "",
+        upper,
+        flags=re.IGNORECASE,
+    ).strip()
+    return cleaned.title() if cleaned else raw.title()
 
 
 def _centroid(geom: dict[str, Any] | None) -> tuple[float, float] | None:
     if not geom:
         return None
-    # ArcGIS polygon rings or x/y point
     if "x" in geom and "y" in geom:
         try:
             return float(geom["y"]), float(geom["x"])
@@ -82,84 +104,89 @@ def geocode_nominatim(address: str, city: str) -> tuple[float, float] | None:
         return None
 
 
-def fetch_nj_parcels(limit: int, *, min_units: int = 10) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    per_mun = max(1, (limit + 1) // 2)
+def _parse_units(dwell: Any) -> int | None:
+    if dwell is None or dwell == "":
+        return None
+    try:
+        return int(float(dwell))
+    except (TypeError, ValueError):
+        return None
 
-    for mun_name in sorted(TARGET_MUNS):
-        offset = 0
-        where = (
-            f"COUNTY='HUDSON' AND PROP_CLASS IN ('4A','4B','4C') "
-            f"AND MUN_NAME='{mun_name}'"
-        )
-        mun_rows = 0
-        with tqdm(desc=f"Fetching {mun_name.title()}", unit=" rows") as bar:
-            while mun_rows < per_mun and len(rows) < limit:
-                params = {
-                    "where": where,
-                    "outFields": "PROP_LOC,MUN_NAME,OWNER_NAME,BLDG_DESC,DWELL,PROP_CLASS,COUNTY",
-                    "returnGeometry": "true",
-                    "outSR": "4326",
-                    "resultOffset": offset,
-                    "resultRecordCount": min(PAGE_SIZE, per_mun - mun_rows),
-                    "f": "json",
-                }
-                resp = requests.get(NJ_MOD4_URL, params=params, timeout=120)
-                resp.raise_for_status()
-                data = resp.json()
-                feats = data.get("features") or []
-                if not feats:
+
+def fetch_county_parcels(county: str, limit: int) -> list[dict[str, Any]]:
+    """Fetch up to `limit` 4A/4B/4C parcels for one county (no unit filter)."""
+    rows: list[dict[str, Any]] = []
+    offset = 0
+    where = f"COUNTY='{county}' AND PROP_CLASS IN ('4A','4B','4C')"
+
+    with tqdm(desc=f"Fetching {county.title()}", unit=" rows") as bar:
+        while len(rows) < limit:
+            params = {
+                "where": where,
+                "outFields": "PROP_LOC,MUN_NAME,OWNER_NAME,BLDG_DESC,DWELL,PROP_CLASS,COUNTY",
+                "returnGeometry": "true",
+                "outSR": "4326",
+                "resultOffset": offset,
+                "resultRecordCount": min(PAGE_SIZE, limit - len(rows)),
+                "f": "json",
+            }
+            resp = requests.get(NJ_MOD4_URL, params=params, timeout=120)
+            resp.raise_for_status()
+            data = resp.json()
+            feats = data.get("features") or []
+            if not feats:
+                break
+
+            for feat in feats:
+                attrs = feat.get("attributes") or {}
+                loc = normalize_address(attrs.get("PROP_LOC"))
+                if not loc:
+                    continue
+                mun = str(attrs.get("MUN_NAME") or "").strip()
+                rows.append(
+                    {
+                        "address": loc,
+                        "municipality": _title_municipality(mun),
+                        "county": county.title(),
+                        "owner_name": (attrs.get("OWNER_NAME") or "").strip() or None,
+                        "building_description": (attrs.get("BLDG_DESC") or "").strip() or None,
+                        "units": _parse_units(attrs.get("DWELL")),
+                        "latlon": _centroid(feat.get("geometry")),
+                    }
+                )
+                if len(rows) >= limit:
                     break
-                for feat in feats:
-                    attrs = feat.get("attributes") or {}
-                    mun = str(attrs.get("MUN_NAME") or "").strip().upper()
-                    if mun not in TARGET_MUNS:
-                        continue
-                    loc = normalize_address(attrs.get("PROP_LOC"))
-                    if not loc:
-                        continue
-                    dwell = attrs.get("DWELL")
-                    try:
-                        units = (
-                            int(float(dwell))
-                            if dwell is not None and dwell != ""
-                            else None
-                        )
-                    except (TypeError, ValueError):
-                        units = None
-                    if units is not None and units <= min_units:
-                        continue
-                    if units is None and str(attrs.get("PROP_CLASS") or "").upper() not in (
-                        "4B",
-                        "4C",
-                    ):
-                        continue
-                    latlon = _centroid(feat.get("geometry"))
-                    rows.append(
-                        {
-                            "address": loc,
-                            "municipality": _title_municipality(mun),
-                            "owner_name": (attrs.get("OWNER_NAME") or "").strip() or None,
-                            "building_description": (attrs.get("BLDG_DESC") or "").strip()
-                            or None,
-                            "units": units,
-                            "latlon": latlon,
-                        }
-                    )
-                    mun_rows += 1
-                    if mun_rows >= per_mun or len(rows) >= limit:
-                        break
-                bar.update(len(feats))
-                offset += len(feats)
-                if not data.get("exceededTransferLimit") and len(feats) < PAGE_SIZE:
-                    break
+
+            bar.update(len(feats))
+            offset += len(feats)
+            if not data.get("exceededTransferLimit") and len(feats) < PAGE_SIZE:
+                break
+
+    return rows
+
+
+def fetch_nj_parcels(limit: int) -> list[dict[str, Any]]:
+    """Pull apartments across TARGET_COUNTIES, splitting the limit evenly."""
+    per_county = max(1, limit // len(TARGET_COUNTIES))
+    leftover = limit - per_county * len(TARGET_COUNTIES)
+    rows: list[dict[str, Any]] = []
+
+    for i, county in enumerate(TARGET_COUNTIES):
+        county_limit = per_county + (leftover if i == 0 else 0)
+        if len(rows) >= limit:
+            break
+        county_limit = min(county_limit, limit - len(rows))
+        chunk = fetch_county_parcels(county, county_limit)
+        rows.extend(chunk)
+        print(f"  {county}: {len(chunk)} parcels")
 
     seen: set[str] = set()
     unique: list[dict[str, Any]] = []
     for row in rows:
-        if row["address"] in seen:
+        key = f"{row['municipality']}|{row['address']}"
+        if key in seen:
             continue
-        seen.add(row["address"])
+        seen.add(key)
         unique.append(row)
         if len(unique) >= limit:
             break
@@ -189,7 +216,7 @@ def fetch_existing_addresses(client) -> set[str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--limit", type=int, default=5_000)
+    parser.add_argument("--limit", type=int, default=20_000)
     parser.add_argument("--batch-size", type=int, default=50)
     parser.add_argument(
         "--geocode-missing",

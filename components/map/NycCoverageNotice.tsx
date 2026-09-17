@@ -25,7 +25,7 @@ export function NycCoverageNotice({
         <p className="mt-2 text-sm leading-relaxed text-neutral-300">
           Your device location isn&apos;t in our database yet. We cover{" "}
           <strong className="text-neutral-100">Manhattan, Brooklyn, Queens
-          &amp; Jersey City</strong> right now. The map starts in NYC so you
+          &amp; North Jersey</strong> right now. The map starts in NYC so you
           can still research places here; we&apos;re not blocking you from
           panning elsewhere.
         </p>

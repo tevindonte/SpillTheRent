@@ -87,7 +87,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What cities or neighborhoods do you cover?",
     answer:
-      "Currently Manhattan, Brooklyn, Queens, and Jersey City / Hoboken in New Jersey. NYC buildings include the full violation signal stack; NJ is launching with building coverage first.",
+      "Currently Manhattan, Brooklyn, Queens, and North Jersey (Hudson, Essex, Bergen, Union counties). NYC buildings include the full violation signal stack; NJ is launching with building coverage first.",
   },
   {
     question: "I'm a landlord. Can I respond to reviews?",
