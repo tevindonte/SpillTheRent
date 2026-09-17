@@ -12,11 +12,13 @@ function SignalRow({
   title,
   badgeClass,
   children,
+  titleClassName,
 }: {
   icon: string;
   title: string;
   badgeClass?: string;
   children: React.ReactNode;
+  titleClassName?: string;
 }) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/40 p-3">
@@ -25,7 +27,9 @@ function SignalRow({
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-neutral-100">
+          <p
+            className={`flex flex-wrap items-center gap-2 text-sm font-medium ${titleClassName ?? "text-neutral-100"}`}
+          >
             {title}
             {badgeClass && (
               <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badgeClass}`}>
@@ -45,12 +49,23 @@ export function BuildingRecordSection({
   hpdOpenViolations,
 }: BuildingRecordSectionProps) {
   const currentYear = new Date().getFullYear();
+  const courtCount = Math.max(
+    signals.hp_action_count ?? 0,
+    signals.housing_court_case_count ?? 0
+  );
+  const hasOwner =
+    Boolean(signals.owner_llc?.trim()) || Boolean(signals.owner_name_verified?.trim());
   const hasAny =
     hpdOpenViolations > 0 ||
     signals.has_bedbug_history ||
     signals.has_active_construction ||
     signals.oath_violation_count > 0 ||
-    signals.hp_action_count > 0;
+    courtCount > 0 ||
+    (signals.dob_complaint_count ?? 0) > 0 ||
+    (signals.fdny_violation_count ?? 0) > 0 ||
+    (signals.dep_violation_count ?? 0) > 0 ||
+    (signals.lead_paint_violation_count ?? 0) > 0 ||
+    hasOwner;
 
   if (!hasAny) {
     return (
@@ -73,10 +88,61 @@ export function BuildingRecordSection({
     <div className="mt-5 space-y-2">
       <h3 className="text-sm font-semibold text-neutral-200">Building Record</h3>
 
+      {hasOwner && (
+        <SignalRow icon="🏢" title="Registered Owner">
+          {signals.owner_llc?.trim() ? (
+            <>
+              <p>LLC Owner: {signals.owner_llc.trim()}</p>
+              {signals.owner_name_verified?.trim() && (
+                <p className="mt-1">Head Officer: {signals.owner_name_verified.trim()}</p>
+              )}
+            </>
+          ) : (
+            <p>Owner: {signals.owner_name_verified?.trim()}</p>
+          )}
+          {signals.owner_phone?.trim() && (
+            <p className="mt-1">Phone: {signals.owner_phone.trim()}</p>
+          )}
+        </SignalRow>
+      )}
+
       {hpdOpenViolations > 0 && (
         <SignalRow icon="🚨" title="HPD Violations">
           {hpdOpenViolations} open violation{hpdOpenViolations === 1 ? "" : "s"} on
           file with NYC Housing Preservation & Development.
+        </SignalRow>
+      )}
+
+      {(signals.dob_complaint_count ?? 0) > 0 && (
+        <SignalRow icon="📋" title="DOB Complaints">
+          {signals.dob_complaint_count} building complaint
+          {signals.dob_complaint_count === 1 ? "" : "s"} on file with DOB.
+        </SignalRow>
+      )}
+
+      {(signals.fdny_violation_count ?? 0) > 0 && (
+        <SignalRow icon="🚒" title="FDNY Violations">
+          {signals.fdny_violation_count} fire safety violation
+          {signals.fdny_violation_count === 1 ? "" : "s"} on file.
+        </SignalRow>
+      )}
+
+      {(signals.dep_violation_count ?? 0) > 0 && (
+        <SignalRow icon="💧" title="DEP Violations">
+          {signals.dep_violation_count} environmental violation
+          {signals.dep_violation_count === 1 ? "" : "s"} on file with DEP.
+        </SignalRow>
+      )}
+
+      {(signals.lead_paint_violation_count ?? 0) > 0 && (
+        <SignalRow
+          icon="⚠️"
+          title={`${signals.lead_paint_violation_count} open lead paint violation${signals.lead_paint_violation_count === 1 ? "" : "s"}`}
+          titleClassName="text-red-400"
+          badgeClass="border-red-900/50 bg-red-950/50 text-red-400"
+        >
+          Especially important for families with young children. Check HPD Online
+          for remediation status.
         </SignalRow>
       )}
 
@@ -116,19 +182,34 @@ export function BuildingRecordSection({
         </SignalRow>
       )}
 
-      {signals.hp_action_count > 0 && (
+      {courtCount > 0 && (
         <SignalRow
           icon="⚖️"
           title="Tenant Legal Actions"
           badgeClass={
-            signals.hp_action_count >= 3
+            courtCount >= 3
               ? "border-red-900/50 bg-red-950/50 text-red-400"
               : undefined
           }
         >
-          Tenants have taken this landlord to housing court{" "}
-          {signals.hp_action_count} time{signals.hp_action_count === 1 ? "" : "s"}.
-          {signals.hp_action_count >= 3 && (
+          {(signals.housing_court_case_count ?? 0) > 0 ? (
+            <>
+              {signals.housing_court_case_count} housing court case
+              {signals.housing_court_case_count === 1 ? "" : "s"} on file
+              {(signals.hp_action_count ?? 0) > 0 && (
+                <> (including {signals.hp_action_count} tenant HP action
+                {signals.hp_action_count === 1 ? "" : "s"})</>
+              )}
+              .
+            </>
+          ) : (
+            <>
+              Tenants have taken this landlord to housing court{" "}
+              {signals.hp_action_count} time
+              {signals.hp_action_count === 1 ? "" : "s"}.
+            </>
+          )}
+          {courtCount >= 3 && (
             <p className="mt-2 text-red-400">
               🚨 Multiple legal actions filed against this landlord
             </p>

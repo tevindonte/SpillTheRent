@@ -23,6 +23,10 @@ def fetch_socrata(
     where: str | None = None,
     limit: int | None = None,
     desc: str = "Fetching",
+    page_size: int = PAGE_SIZE,
+    select: str | None = None,
+    timeout: int = 120,
+    max_retries: int = 4,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     offset = 0
@@ -32,13 +36,34 @@ def fetch_socrata(
             if limit is not None and len(rows) >= limit:
                 return rows[:limit]
 
-            params: dict[str, Any] = {"$limit": PAGE_SIZE, "$offset": offset}
+            params: dict[str, Any] = {
+                "$limit": page_size,
+                "$offset": offset,
+            }
             if where:
                 params["$where"] = where
+            if select:
+                params["$select"] = select
 
-            resp = requests.get(api_url, params=params, timeout=120)
-            resp.raise_for_status()
-            batch = resp.json()
+            batch = None
+            last_err: Exception | None = None
+            for attempt in range(max_retries):
+                try:
+                    resp = requests.get(api_url, params=params, timeout=timeout)
+                    resp.raise_for_status()
+                    batch = resp.json()
+                    break
+                except Exception as e:
+                    last_err = e
+                    if attempt >= max_retries - 1:
+                        break
+                    import time
+
+                    time.sleep(2 ** attempt)
+            if batch is None:
+                assert last_err is not None
+                raise last_err
+
             if not batch:
                 break
 
@@ -46,7 +71,7 @@ def fetch_socrata(
             bar.update(len(batch))
             offset += len(batch)
 
-            if len(batch) < PAGE_SIZE:
+            if len(batch) < page_size:
                 break
 
     return rows

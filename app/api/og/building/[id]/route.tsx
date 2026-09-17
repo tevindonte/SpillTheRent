@@ -71,6 +71,14 @@ export async function GET(
       oath_violation_count: (data.oath_violation_count as number) ?? 0,
       hp_action_count: (data.hp_action_count as number) ?? 0,
       hp_action_last_year: null,
+      dob_complaint_count: 0,
+      fdny_violation_count: 0,
+      dep_violation_count: 0,
+      lead_paint_violation_count: 0,
+      housing_court_case_count: 0,
+      owner_name_verified: null,
+      owner_phone: null,
+      owner_llc: null,
     },
   };
 

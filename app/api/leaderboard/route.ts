@@ -28,6 +28,14 @@ function matchesBorough(borough: string | null, area: BoroughArea): boolean {
   if (area === "manhattan") return borough === "Manhattan";
   if (area === "brooklyn") return borough === "Brooklyn";
   if (area === "queens") return borough === "Queens";
+  if (area === "newjersey") {
+    const b = (borough ?? "").toLowerCase();
+    return (
+      b.includes("jersey city") ||
+      b.includes("hoboken") ||
+      b.includes("hudson")
+    );
+  }
   return true;
 }
 

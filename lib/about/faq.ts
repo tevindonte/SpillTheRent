@@ -7,7 +7,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What is spillthe.rent?",
     answer:
-      "spillthe.rent is a free rental research tool built entirely for renters. Search any apartment building in Manhattan, Brooklyn, or Queens and get the real picture: tenant reviews, government violation records, bedbug history, landlord portfolios, and real rent prices people actually paid. No sugar coating, no landlord spin.",
+      "spillthe.rent is a free rental research tool built entirely for renters. Search any apartment building in Manhattan, Brooklyn, Queens, or Jersey City and get the real picture: tenant reviews, government violation records, bedbug history, landlord portfolios, and real rent prices people actually paid. No sugar coating, no landlord spin.",
   },
   {
     question: "Where does the data come from?",
@@ -87,7 +87,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What cities or neighborhoods do you cover?",
     answer:
-      "Currently Manhattan, Brooklyn, and Queens. We're expanding to more NYC boroughs and cities based on demand.",
+      "Currently Manhattan, Brooklyn, Queens, and Jersey City / Hoboken in New Jersey. NYC buildings include the full violation signal stack; NJ is launching with building coverage first.",
   },
   {
     question: "I'm a landlord. Can I respond to reviews?",

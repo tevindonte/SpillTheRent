@@ -57,7 +57,7 @@ export function AboutPage() {
       <section className="space-y-3 text-sm leading-relaxed text-neutral-300">
         <p>
           <strong className="text-neutral-100">spillthe.rent</strong> maps
-          multifamily buildings across Manhattan, Brooklyn, and Queens
+          multifamily buildings across Manhattan, Brooklyn, Queens & Jersey City
           so you can see the full picture before you sign a lease.
         </p>
         <p>

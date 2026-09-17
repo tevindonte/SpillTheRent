@@ -42,6 +42,9 @@ export async function GET(
        has_bedbug_history, bedbug_last_reported_year, bedbug_report_count,
        has_active_construction, active_permit_count, oath_violation_count,
        hp_action_count, hp_action_last_year, cached_community_score,
+       dob_complaint_count, fdny_violation_count, dep_violation_count,
+       lead_paint_violation_count, housing_court_case_count,
+       owner_name_verified, owner_phone, owner_llc,
        neighborhood, verified, source`
     )
     .eq("id", id)
@@ -203,6 +206,14 @@ export async function GET(
       oath_violation_count: complex.oath_violation_count ?? 0,
       hp_action_count: complex.hp_action_count ?? 0,
       hp_action_last_year: complex.hp_action_last_year,
+      dob_complaint_count: complex.dob_complaint_count ?? 0,
+      fdny_violation_count: complex.fdny_violation_count ?? 0,
+      dep_violation_count: complex.dep_violation_count ?? 0,
+      lead_paint_violation_count: complex.lead_paint_violation_count ?? 0,
+      housing_court_case_count: complex.housing_court_case_count ?? 0,
+      owner_name_verified: complex.owner_name_verified ?? null,
+      owner_phone: complex.owner_phone ?? null,
+      owner_llc: complex.owner_llc ?? null,
     },
   });
 }

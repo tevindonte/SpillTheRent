@@ -719,6 +719,142 @@ def _recompute_hpd_scores_sql(db_url: str) -> None:
     print("HPD scores updated.")
 
 
+def recompute_simple_count_signal(
+    client: Client | None,
+    *,
+    table: str,
+    count_column: str,
+    label: str,
+) -> None:
+    """Reset + recompute a single integer count column on complexes from a child table."""
+    db_url = _get_database_url()
+    if db_url:
+
+        def _sql() -> None:
+            import psycopg2
+
+            conn = psycopg2.connect(db_url)
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        f"UPDATE public.complexes SET {count_column} = 0"
+                    )
+                    cur.execute(
+                        f"""
+                        UPDATE public.complexes AS c
+                        SET {count_column} = agg.cnt
+                        FROM (
+                          SELECT complex_id, COUNT(*)::int AS cnt
+                          FROM public.{table}
+                          WHERE complex_id IS NOT NULL
+                          GROUP BY complex_id
+                        ) AS agg
+                        WHERE c.id = agg.complex_id
+                        """
+                    )
+                conn.commit()
+            finally:
+                conn.close()
+
+        print(f"Recomputing {label} (SQL)…")
+        if _run_sql_job(label, _sql):
+            print(f"{label} updated.")
+            return
+
+    if client is None:
+        client = _fresh_supabase_client()
+
+    print(f"Recomputing {label} (REST)…")
+    by_complex: dict[str, int] = {}
+    offset = 0
+    while True:
+        res = retry_execute(
+            lambda o=offset: client.table(table)
+            .select("complex_id")
+            .not_.is_("complex_id", "null")
+            .range(o, o + 999)
+            .execute(),
+            label=f"fetch {table}",
+        )
+        batch = res.data or []
+        for row in batch:
+            cid = row["complex_id"]
+            by_complex[cid] = by_complex.get(cid, 0) + 1
+        if len(batch) < 1000:
+            break
+        offset += 1000
+
+    retry_execute(
+        lambda: client.table("complexes")
+        .update({count_column: 0})
+        .neq("id", "00000000-0000-0000-0000-000000000000")
+        .execute(),
+        label=f"reset {label}",
+    )
+
+    if not by_complex:
+        print(f"No {table} rows linked to complexes.")
+        return
+
+    active = client
+    for i, (cid, count) in enumerate(tqdm(by_complex.items(), desc=f"Updating {label}")):
+        if i > 0 and i % 400 == 0:
+            active = _fresh_supabase_client()
+        retry_execute(
+            lambda c=cid, n=count, cl=active: cl.table("complexes")
+            .update({count_column: n})
+            .eq("id", c)
+            .execute(),
+            label=f"{label} update",
+        )
+    print(f"Updated {label} for {len(by_complex)} complexes.")
+
+
+def recompute_dob_complaint_signals(client: Client | None = None) -> None:
+    recompute_simple_count_signal(
+        client,
+        table="dob_complaints",
+        count_column="dob_complaint_count",
+        label="DOB complaint signals",
+    )
+
+
+def recompute_fdny_signals(client: Client | None = None) -> None:
+    recompute_simple_count_signal(
+        client,
+        table="fdny_violations",
+        count_column="fdny_violation_count",
+        label="FDNY violation signals",
+    )
+
+
+def recompute_dep_signals(client: Client | None = None) -> None:
+    recompute_simple_count_signal(
+        client,
+        table="dep_violations",
+        count_column="dep_violation_count",
+        label="DEP violation signals",
+    )
+
+
+def recompute_lead_paint_signals(client: Client | None = None) -> None:
+    recompute_simple_count_signal(
+        client,
+        table="lead_paint_violations",
+        count_column="lead_paint_violation_count",
+        label="Lead paint signals",
+    )
+
+
+def recompute_housing_court_signals(client: Client | None = None) -> None:
+    recompute_simple_count_signal(
+        client,
+        table="housing_court_cases",
+        count_column="housing_court_case_count",
+        label="Housing court signals",
+    )
+
+
 def batch_mark_rent_stabilized(
     client: Client,
     complex_ids: list[str],

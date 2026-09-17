@@ -9,6 +9,14 @@ export type BuildingSignals = {
   oath_violation_count: number;
   hp_action_count: number;
   hp_action_last_year: number | null;
+  dob_complaint_count: number;
+  fdny_violation_count: number;
+  dep_violation_count: number;
+  lead_paint_violation_count: number;
+  housing_court_case_count: number;
+  owner_name_verified: string | null;
+  owner_phone: string | null;
+  owner_llc: string | null;
 };
 
 export type LandlordSummary = {
