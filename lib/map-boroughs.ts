@@ -4,7 +4,8 @@ export type BoroughArea =
   | "manhattan"
   | "brooklyn"
   | "queens"
-  | "newjersey";
+  | "newjersey"
+  | "boston";
 
 export const BOROUGH_PILLS: { id: BoroughArea; label: string }[] = [
   { id: "all", label: "All" },
@@ -12,6 +13,7 @@ export const BOROUGH_PILLS: { id: BoroughArea; label: string }[] = [
   { id: "brooklyn", label: "Brooklyn" },
   { id: "queens", label: "Queens" },
   { id: "newjersey", label: "New Jersey" },
+  { id: "boston", label: "Boston" },
 ];
 
 /** Fly-to targets: [lat, lng] (MapView converts to lng/lat for MapLibre). */
@@ -24,6 +26,7 @@ export const BOROUGH_FLY_TO: Record<
   queens: { center: [40.7282, -73.7949], zoom: 12 },
   // North Jersey: Hudson / Essex / Bergen / Union corridor
   newjersey: { center: [40.7357, -74.1745], zoom: 10 },
+  boston: { center: [42.3601, -71.0589], zoom: 12 },
 };
 
 /** Normalize query/API boroughArea values (`lic` kept as alias → queens). */
@@ -36,11 +39,13 @@ export function parseBoroughAreaParam(
     raw === "manhattan" ||
     raw === "brooklyn" ||
     raw === "queens" ||
-    raw === "newjersey"
+    raw === "newjersey" ||
+    raw === "boston"
   ) {
     return raw;
   }
   if (raw === "nj") return "newjersey";
+  if (raw === "ma" || raw === "massachusetts") return "boston";
   if (raw === "lic") return "queens";
   return undefined;
 }
@@ -59,6 +64,27 @@ function isNewJerseyBorough(borough: string | null | undefined): boolean {
   );
 }
 
+function isBostonBorough(borough: string | null | undefined): boolean {
+  const b = (borough ?? "").trim().toLowerCase();
+  return (
+    b.includes("boston") ||
+    b.includes("dorchester") ||
+    b.includes("roxbury") ||
+    b.includes("allston") ||
+    b.includes("brighton") ||
+    b.includes("jamaica plain") ||
+    b.includes("charlestown") ||
+    b.includes("hyde park") ||
+    b.includes("mattapan") ||
+    b.includes("roslindale") ||
+    b.includes("fenway") ||
+    b.includes("back bay") ||
+    b.includes("beacon hill") ||
+    b.includes("south end") ||
+    b.includes("mission hill")
+  );
+}
+
 /** Client-side filter when map summary query cannot run (fallback path). */
 export function matchesBoroughArea(
   complex: { borough: string | null; neighborhood?: string | null; source?: string | null },
@@ -71,6 +97,9 @@ export function matchesBoroughArea(
   if (area === "queens") return borough === "Queens";
   if (area === "newjersey") {
     return isNewJerseyBorough(borough) || complex.source === "nj_mod4";
+  }
+  if (area === "boston") {
+    return isBostonBorough(borough) || complex.source === "boston_assessment";
   }
   return true;
 }
@@ -85,6 +114,11 @@ export function applyBoroughAreaFilter(query: any, area: BoroughArea | undefined
   if (area === "newjersey") {
     return query.or(
       "borough.ilike.%Jersey City%,borough.ilike.%Hoboken%,borough.ilike.%Hudson%,source.eq.nj_mod4"
+    );
+  }
+  if (area === "boston") {
+    return query.or(
+      "borough.ilike.%Boston%,borough.ilike.%Dorchester%,borough.ilike.%Roxbury%,borough.ilike.%Allston%,borough.ilike.%Brighton%,borough.ilike.%Jamaica Plain%,source.eq.boston_assessment"
     );
   }
   return query;

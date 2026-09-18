@@ -95,15 +95,25 @@ export function MicroRatingBlock({
       <p className="mt-1 text-[11px] text-neutral-500">
         Tap 1–5 for each. No essay required.
       </p>
+      <p className="mt-0.5 text-[11px] text-neutral-600" title="1 = big problem · 5 = no issues">
+        1 = big problem · 5 = no issues
+      </p>
       <ul className="mt-3 space-y-2">
         {FIELDS.map(({ key, label }) => (
           <li key={key} className="flex items-center justify-between gap-2">
-            <span className="text-xs text-neutral-400">{label}</span>
-            <div className="flex gap-1">
+            <span
+              className="text-xs text-neutral-400"
+              title="1 = big problem · 5 = no issues"
+            >
+              {label}
+            </span>
+            <div className="flex gap-1" title="1 = big problem · 5 = no issues">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
                   key={n}
                   type="button"
+                  title={`1 = big problem · 5 = no issues (${n})`}
+                  aria-label={`${label}: ${n} of 5`}
                   onClick={() =>
                     setScores((s) => ({ ...s, [key]: s[key] === n ? null : n }))
                   }

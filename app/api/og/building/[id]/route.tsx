@@ -76,6 +76,8 @@ export async function GET(
       dep_violation_count: 0,
       lead_paint_violation_count: 0,
       housing_court_case_count: 0,
+      boston_violation_count: 0,
+      boston_311_count: 0,
       owner_name_verified: null,
       owner_phone: null,
       owner_llc: null,

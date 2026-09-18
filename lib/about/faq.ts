@@ -7,12 +7,12 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What is spillthe.rent?",
     answer:
-      "spillthe.rent is a free rental research tool built entirely for renters. Search any apartment building in Manhattan, Brooklyn, Queens, or Jersey City and get the real picture: tenant reviews, government violation records, bedbug history, landlord portfolios, and real rent prices people actually paid. No sugar coating, no landlord spin.",
+      "spillthe.rent is a free rental research tool built entirely for renters. Search any apartment building in Manhattan, Brooklyn, Queens, North Jersey, or Boston and get the real picture: tenant reviews, government violation records, bedbug history, landlord portfolios, and real rent prices people actually paid. No sugar coating, no landlord spin.",
   },
   {
     question: "Where does the data come from?",
     answer:
-      "We pull from multiple sources: NYC HPD violation records, the NYC Bedbug Registry, Department of Buildings permits, housing court tenant actions, OATH short-term rental violations, NYC rent stabilization lists, Google Reviews, and direct submissions from real tenants. Everything is sourced from official government databases or verified tenant reports. Nothing is fabricated or paid for by landlords.",
+      "We pull from multiple sources: NYC HPD violation records, the NYC Bedbug Registry, Department of Buildings permits, housing court tenant actions, OATH short-term rental violations, NYC rent stabilization lists, Boston ISD / 311 / assessment data, Google Reviews, and direct submissions from real tenants. Everything is sourced from official government databases or verified tenant reports. Nothing is fabricated or paid for by landlords.",
   },
   {
     question: "Is this free to use?",
@@ -87,7 +87,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What cities or neighborhoods do you cover?",
     answer:
-      "Currently Manhattan, Brooklyn, Queens, and North Jersey (Hudson, Essex, Bergen, Union counties). NYC buildings include the full violation signal stack; NJ is launching with building coverage first.",
+      "Currently Manhattan, Brooklyn, Queens, North Jersey (Hudson, Essex, Bergen, Union counties), and Boston. NYC buildings include the full violation signal stack; NJ and Boston are expanding with building coverage and local agency records.",
   },
   {
     question: "I'm a landlord. Can I respond to reviews?",

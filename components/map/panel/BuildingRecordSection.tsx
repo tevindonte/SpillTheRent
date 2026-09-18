@@ -65,6 +65,8 @@ export function BuildingRecordSection({
     (signals.fdny_violation_count ?? 0) > 0 ||
     (signals.dep_violation_count ?? 0) > 0 ||
     (signals.lead_paint_violation_count ?? 0) > 0 ||
+    (signals.boston_violation_count ?? 0) > 0 ||
+    (signals.boston_311_count ?? 0) > 0 ||
     hasOwner;
 
   if (!hasAny) {
@@ -143,6 +145,20 @@ export function BuildingRecordSection({
         >
           Especially important for families with young children. Check HPD Online
           for remediation status.
+        </SignalRow>
+      )}
+
+      {(signals.boston_violation_count ?? 0) > 0 && (
+        <SignalRow icon="📋" title="Boston ISD Violations">
+          {signals.boston_violation_count} Boston ISD violation
+          {signals.boston_violation_count === 1 ? "" : "s"} on file
+        </SignalRow>
+      )}
+
+      {(signals.boston_311_count ?? 0) > 0 && (
+        <SignalRow icon="📞" title="Boston 311">
+          {signals.boston_311_count} complaint
+          {signals.boston_311_count === 1 ? "" : "s"} filed with Boston 311
         </SignalRow>
       )}
 

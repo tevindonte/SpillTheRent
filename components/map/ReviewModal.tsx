@@ -179,29 +179,53 @@ export function ReviewModal({
             <label className="mb-2 block text-xs font-medium text-neutral-400">
               Your rating
             </label>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  disabled={submitting}
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(0)}
-                  onClick={() => setRating(star)}
-                  className="text-2xl"
-                >
-                  <span
-                    className={
-                      star <= (hoverRating || rating)
-                        ? "text-orange-500"
-                        : "text-neutral-600"
-                    }
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  { star: 1, label: "Terrible" },
+                  { star: 2, label: "Poor" },
+                  { star: 3, label: "Okay" },
+                  { star: 4, label: "Good" },
+                  { star: 5, label: "Great" },
+                ] as const
+              ).map(({ star, label }) => {
+                const active = star <= (hoverRating || rating);
+                return (
+                  <button
+                    key={star}
+                    type="button"
+                    disabled={submitting}
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => setRating(star)}
+                    className={`flex min-w-[3.25rem] flex-col items-center rounded-lg border px-2 py-1.5 transition ${
+                      rating === star
+                        ? "border-orange-500/60 bg-orange-500/10"
+                        : "border-neutral-800 bg-neutral-900/40 hover:border-neutral-700"
+                    }`}
+                    aria-label={`${star} — ${label}`}
                   >
-                    ★
-                  </span>
-                </button>
-              ))}
+                    <span
+                      className={`text-xl leading-none ${
+                        active ? "text-orange-500" : "text-neutral-600"
+                      }`}
+                    >
+                      ★
+                    </span>
+                    <span
+                      className={`mt-1 text-[10px] font-medium ${
+                        rating === star ? "text-orange-400" : "text-neutral-500"
+                      }`}
+                    >
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+            <p className="mt-2 text-[11px] text-neutral-500">
+              1 = worst · 5 = best
+            </p>
           </div>
 
           <div>

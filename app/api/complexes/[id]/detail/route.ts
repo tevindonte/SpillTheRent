@@ -44,6 +44,7 @@ export async function GET(
        hp_action_count, hp_action_last_year, cached_community_score,
        dob_complaint_count, fdny_violation_count, dep_violation_count,
        lead_paint_violation_count, housing_court_case_count,
+       boston_violation_count, boston_311_count,
        owner_name_verified, owner_phone, owner_llc,
        neighborhood, verified, source`
     )
@@ -211,6 +212,8 @@ export async function GET(
       dep_violation_count: complex.dep_violation_count ?? 0,
       lead_paint_violation_count: complex.lead_paint_violation_count ?? 0,
       housing_court_case_count: complex.housing_court_case_count ?? 0,
+      boston_violation_count: complex.boston_violation_count ?? 0,
+      boston_311_count: complex.boston_311_count ?? 0,
       owner_name_verified: complex.owner_name_verified ?? null,
       owner_phone: complex.owner_phone ?? null,
       owner_llc: complex.owner_llc ?? null,

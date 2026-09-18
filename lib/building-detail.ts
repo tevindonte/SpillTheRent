@@ -14,6 +14,8 @@ export type BuildingSignals = {
   dep_violation_count: number;
   lead_paint_violation_count: number;
   housing_court_case_count: number;
+  boston_violation_count: number;
+  boston_311_count: number;
   owner_name_verified: string | null;
   owner_phone: string | null;
   owner_llc: string | null;

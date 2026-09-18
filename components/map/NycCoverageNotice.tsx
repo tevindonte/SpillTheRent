@@ -24,15 +24,15 @@ export function NycCoverageNotice({
       {isVisitor ? (
         <p className="mt-2 text-sm leading-relaxed text-neutral-300">
           Your device location isn&apos;t in our database yet. We cover{" "}
-          <strong className="text-neutral-100">Manhattan, Brooklyn, Queens
-          &amp; North Jersey</strong> right now. The map starts in NYC so you
+          <strong className="text-neutral-100">Manhattan, Brooklyn, Queens,
+          North Jersey &amp; Boston</strong> right now. The map starts in NYC so you
           can still research places here; we&apos;re not blocking you from
           panning elsewhere.
         </p>
       ) : (
         <p className="mt-2 text-sm leading-relaxed text-neutral-300">
-          There aren&apos;t any buildings on the map here. Coverage today is NYC
-          &amp; NJ Hudson County, so drag back toward the city or use the button
+          There aren&apos;t any buildings on the map here. Coverage today is NYC,
+          NJ &amp; Boston, so drag back toward a covered city or use the button
           below.
         </p>
       )}
@@ -42,7 +42,7 @@ export function NycCoverageNotice({
           onClick={onFlyToNyc}
           className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-neutral-950 hover:bg-orange-400"
         >
-          {isVisitor ? "Jump to NYC & NJ" : "Back to NYC"}
+          {isVisitor ? "Jump to NYC, NJ & Boston" : "Back to coverage"}
         </button>
         {isVisitor && onDismiss && (
           <button

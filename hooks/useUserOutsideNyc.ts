@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isInNycServiceArea } from "@/lib/nyc-service-area";
+import { isInServiceArea } from "@/lib/nyc-service-area";
 
 /** One-time browser geolocation check; does not move the map. */
 export function useUserOutsideNyc(): boolean | null {
@@ -15,7 +15,7 @@ export function useUserOutsideNyc(): boolean | null {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setOutside(
-          !isInNycServiceArea(pos.coords.latitude, pos.coords.longitude)
+          !isInServiceArea(pos.coords.latitude, pos.coords.longitude)
         );
       },
       () => setOutside(false),
