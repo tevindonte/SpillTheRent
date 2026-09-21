@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useVisitorStatsLabel } from "@/components/VisitorSocialProof";
 
 const STORAGE_KEY = "spr_onboarded";
 
@@ -22,8 +23,7 @@ const SLIDES = [
   {
     label: "NYC. NJ. BOSTON.",
     title: "The tea app for apartments.",
-    subtitle:
-      "45,000+ buildings and growing. Search any building and get the full picture: reviews, red flags, real rent prices, all in one place.",
+    subtitle: null as string | null,
     illustration: "scale",
   },
 ] as const;
@@ -112,8 +112,12 @@ type OnboardingSlidesProps = {
 
 export function OnboardingSlides({ onComplete }: OnboardingSlidesProps) {
   const [index, setIndex] = useState(0);
+  const visitors = useVisitorStatsLabel();
   const slide = SLIDES[index];
   const isLast = index === SLIDES.length - 1;
+  const subtitle =
+    slide.subtitle ??
+    `45,000+ buildings and growing. Seen by 15k+ people on TikTok — ${visitors} renters already checked the map. Search any building and get the full picture.`;
 
   function finish() {
     localStorage.setItem(STORAGE_KEY, "true");
@@ -142,7 +146,7 @@ export function OnboardingSlides({ onComplete }: OnboardingSlidesProps) {
           {slide.title}
         </h1>
         <p className="mt-4 max-w-sm text-center text-sm leading-relaxed text-neutral-400">
-          {slide.subtitle}
+          {subtitle}
         </p>
         <div className="mt-8 flex gap-2">
           {SLIDES.map((_, i) => (

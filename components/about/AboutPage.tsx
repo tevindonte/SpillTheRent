@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FaqSection } from "@/components/about/FaqSection";
+import { VisitorSocialProofLine } from "@/components/VisitorSocialProof";
 
 const INSTAGRAM_URL = "https://www.instagram.com/spilltherent/";
 
@@ -65,6 +66,7 @@ export function AboutPage() {
           filings, court cases, construction permits, and rent-stabilization
           records) in one place. No sugar coating, no broker spin.
         </p>
+        <VisitorSocialProofLine className="text-neutral-400 text-sm leading-relaxed" />
         <p className="text-neutral-500">
           Use <strong className="text-neutral-400">The Receipt</strong> to
           decode free months, concessions, and broker fees into what you&apos;re

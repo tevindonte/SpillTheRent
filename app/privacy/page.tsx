@@ -58,8 +58,10 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-base font-semibold text-neutral-100">Analytics</h2>
           <p>
-            We may use privacy-friendly analytics (e.g. Plausible) on the
-            website to understand traffic. The extension does not include
+            We use a simple first-party visitor counter on the website (an
+            anonymous browser id stored in your device&apos;s local storage) to
+            understand how many people visit. We do not use third-party ad
+            trackers or sell this data. The browser extension does not include
             third-party ad trackers.
           </p>
         </section>
