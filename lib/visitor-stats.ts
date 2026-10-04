@@ -1,7 +1,10 @@
 /** First-party visitor stats helpers. */
 
-/** Pre-tracking estimate (TikTok wave before this counter existed). */
-export const VISITOR_BASELINE = 300;
+/**
+ * Pre-tracking estimate for TikTok-driven visits (no in-video link).
+ * Scaled up as the video grew from ~15k → ~20k views.
+ */
+export const VISITOR_BASELINE = 500;
 
 export function displayVisitorCount(uniqueTracked: number): number {
   const n = Math.max(0, Math.floor(uniqueTracked));

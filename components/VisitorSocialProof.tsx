@@ -35,7 +35,7 @@ export function VisitorSocialProofLine({ className }: { className?: string }) {
   const visitors = useVisitorStatsLabel();
   return (
     <p className={className}>
-      As seen by <strong className="text-neutral-100">15k+ people on TikTok</strong>
+      As seen by <strong className="text-neutral-100">20k+ people on TikTok</strong>
       . <strong className="text-neutral-100">{visitors}</strong> renters have
       already visited to check buildings before they sign.
     </p>

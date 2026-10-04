@@ -117,7 +117,7 @@ export function OnboardingSlides({ onComplete }: OnboardingSlidesProps) {
   const isLast = index === SLIDES.length - 1;
   const subtitle =
     slide.subtitle ??
-    `45,000+ buildings and growing. Seen by 15k+ people on TikTok — ${visitors} renters already checked the map. Search any building and get the full picture.`;
+    `45,000+ buildings and growing. Seen by 20k+ people on TikTok — ${visitors} renters already checked the map. Search any building and get the full picture.`;
 
   function finish() {
     localStorage.setItem(STORAGE_KEY, "true");
