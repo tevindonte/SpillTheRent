@@ -1,10 +1,12 @@
+import { TIKTOK_VIEWS_LABEL } from "@/lib/visitor-stats";
+
 export const SITE_NAME = "spillthe.rent";
 
 export const DEFAULT_TITLE =
   "spillthe.rent NYC Apartment Reviews & Building Violation Records";
 
 export const DEFAULT_DESCRIPTION =
-  "Search apartments across Manhattan, Brooklyn, Queens, North Jersey & Boston. Seen by 20k+ on TikTok. HPD violations, bedbug history, tenant lawsuits, and real rent prices — free, no landlord ads.";
+  `Search apartments across Manhattan, Brooklyn, Queens, North Jersey & Boston. Seen by ${TIKTOK_VIEWS_LABEL} on TikTok. HPD violations, bedbug history, tenant lawsuits, and real rent prices — free, no landlord ads.`;
 
 /** Server-safe canonical origin (no window). */
 export function getSiteOrigin(): string {

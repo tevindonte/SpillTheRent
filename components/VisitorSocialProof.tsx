@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatVisitorCount, VISITOR_BASELINE } from "@/lib/visitor-stats";
+import {
+  formatVisitorCount,
+  TIKTOK_VIEWS_LABEL,
+  VISITOR_BASELINE,
+} from "@/lib/visitor-stats";
 
 type Stats = {
   label: string;
@@ -14,7 +18,7 @@ export function useVisitorStatsLabel(): string {
 
   useEffect(() => {
     let cancelled = false;
-    void fetch("/api/analytics/stats")
+    void fetch("/api/analytics/stats", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data: Stats | null) => {
         if (cancelled || !data?.label) return;
@@ -35,11 +39,28 @@ export function VisitorSocialProofLine({ className }: { className?: string }) {
   const visitors = useVisitorStatsLabel();
   return (
     <p className={className}>
-      As seen by <strong className="text-neutral-100">20k+ people on TikTok</strong>
+      As seen by{" "}
+      <strong className="text-neutral-100">
+        {TIKTOK_VIEWS_LABEL} people on TikTok
+      </strong>
       . <strong className="text-neutral-100">{visitors}</strong> renters have
       already visited to check buildings before they sign.
     </p>
   );
 }
 
-export { VISITOR_BASELINE };
+/** Compact one-liner for footers / login / share cards. */
+export function VisitorSocialProofCompact({
+  className,
+}: {
+  className?: string;
+}) {
+  const visitors = useVisitorStatsLabel();
+  return (
+    <p className={className}>
+      {TIKTOK_VIEWS_LABEL} on TikTok · {visitors} site visits
+    </p>
+  );
+}
+
+export { TIKTOK_VIEWS_LABEL, VISITOR_BASELINE };

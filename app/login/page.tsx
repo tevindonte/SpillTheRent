@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { authConfirmUrl } from "@/lib/auth/site-url";
 import { formatAuthError } from "@/lib/auth/otp-errors";
+import { VisitorSocialProofCompact } from "@/components/VisitorSocialProof";
 
 type Step = "email" | "otp";
 
@@ -75,6 +76,7 @@ function LoginForm() {
         <Link href="/" className="block text-center text-lg font-semibold text-orange-500">
           spillthe.rent
         </Link>
+        <VisitorSocialProofCompact className="mt-2 text-center text-xs text-neutral-600" />
         <h1 className="mt-8 text-center font-serif text-2xl text-neutral-50">
           {step === "email" ? "Sign in with email" : "Choose how to sign in"}
         </h1>

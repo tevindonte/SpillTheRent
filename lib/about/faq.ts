@@ -1,3 +1,5 @@
+import { TIKTOK_VIEWS_LABEL } from "@/lib/visitor-stats";
+
 export type FaqItem = {
   question: string;
   answer: string;
@@ -7,7 +9,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What is spillthe.rent?",
     answer:
-      "spillthe.rent is a free rental research tool built entirely for renters. Search any apartment building in Manhattan, Brooklyn, Queens, North Jersey, or Boston and get the real picture: tenant reviews, government violation records, bedbug history, landlord portfolios, and real rent prices people actually paid. No sugar coating, no landlord spin.",
+      `spillthe.rent is a free rental research tool built entirely for renters. Seen by ${TIKTOK_VIEWS_LABEL} people on TikTok, with hundreds of renters already checking buildings on the site. Search any apartment in Manhattan, Brooklyn, Queens, North Jersey, or Boston and get the real picture: tenant reviews, government violation records, bedbug history, landlord portfolios, and real rent prices people actually paid. No sugar coating, no landlord spin.`,
   },
   {
     question: "Where does the data come from?",

@@ -1,5 +1,6 @@
 "use client";
 
+import { VisitorSocialProofCompact } from "@/components/VisitorSocialProof";
 import type { BuildingDetail } from "@/lib/building-detail";
 
 export type RapSheetCardProps = {
@@ -109,6 +110,7 @@ export function RapSheetCard({ detail }: RapSheetCardProps) {
         <p className="mt-1 text-xs text-neutral-500">
           The tea app for apartments 🍵
         </p>
+        <VisitorSocialProofCompact className="mt-1 text-xs text-neutral-600" />
       </div>
     </div>
   );

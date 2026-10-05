@@ -6,7 +6,7 @@ import {
   VISITOR_BASELINE,
 } from "@/lib/visitor-stats";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const supabase = createAdminClient();
@@ -21,10 +21,17 @@ export async function GET() {
   const tracked = count ?? 0;
   const display = displayVisitorCount(tracked);
 
-  return NextResponse.json({
-    tracked,
-    baseline: VISITOR_BASELINE,
-    visitors: display,
-    label: formatVisitorCount(tracked),
-  });
+  return NextResponse.json(
+    {
+      tracked,
+      baseline: VISITOR_BASELINE,
+      visitors: display,
+      label: formatVisitorCount(tracked),
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    }
+  );
 }

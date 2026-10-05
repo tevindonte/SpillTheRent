@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useVisitorStatsLabel } from "@/components/VisitorSocialProof";
+import { TIKTOK_VIEWS_LABEL } from "@/lib/visitor-stats";
 
 const STORAGE_KEY = "spr_onboarded";
 
@@ -117,7 +118,7 @@ export function OnboardingSlides({ onComplete }: OnboardingSlidesProps) {
   const isLast = index === SLIDES.length - 1;
   const subtitle =
     slide.subtitle ??
-    `45,000+ buildings and growing. Seen by 20k+ people on TikTok — ${visitors} renters already checked the map. Search any building and get the full picture.`;
+    `45,000+ buildings and growing. Seen by ${TIKTOK_VIEWS_LABEL} people on TikTok — ${visitors} renters already checked the map. Search any building and get the full picture.`;
 
   function finish() {
     localStorage.setItem(STORAGE_KEY, "true");

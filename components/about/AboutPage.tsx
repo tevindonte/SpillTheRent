@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { FaqSection } from "@/components/about/FaqSection";
-import { VisitorSocialProofLine } from "@/components/VisitorSocialProof";
+import {
+  VisitorSocialProofCompact,
+  VisitorSocialProofLine,
+} from "@/components/VisitorSocialProof";
+import { TIKTOK_VIEWS_LABEL } from "@/lib/visitor-stats";
 
 const INSTAGRAM_URL = "https://www.instagram.com/spilltherent/";
 
@@ -81,8 +85,10 @@ export function AboutPage() {
           Social
         </h2>
         <p className="mt-2 text-sm text-neutral-400">
-          Follow us for updates, new buildings, and rental tea.
+          Follow us for updates, new buildings, and rental tea. Seen by{" "}
+          {TIKTOK_VIEWS_LABEL} on TikTok.
         </p>
+        <VisitorSocialProofCompact className="mt-1 text-xs text-neutral-500" />
         <a
           href={INSTAGRAM_URL}
           target="_blank"

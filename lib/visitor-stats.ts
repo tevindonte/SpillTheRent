@@ -1,10 +1,13 @@
-/** First-party visitor stats helpers. */
+/** First-party visitor stats + public social-proof labels. */
 
 /**
  * Pre-tracking estimate for TikTok-driven visits (no in-video link).
- * Scaled up as the video grew from ~15k → ~20k views.
+ * Scaled as the video grew from ~15k → ~20k views.
  */
 export const VISITOR_BASELINE = 500;
+
+/** Public TikTok view count for marketing copy. */
+export const TIKTOK_VIEWS_LABEL = "20k+";
 
 export function displayVisitorCount(uniqueTracked: number): number {
   const n = Math.max(0, Math.floor(uniqueTracked));
@@ -18,4 +21,8 @@ export function formatVisitorCount(uniqueTracked: number): string {
     return Number.isInteger(k) ? `${k}k+` : `${k.toFixed(1).replace(/\.0$/, "")}k+`;
   }
   return `${n}+`;
+}
+
+export function tiktokSeenByLine(): string {
+  return `Seen by ${TIKTOK_VIEWS_LABEL} people on TikTok`;
 }
